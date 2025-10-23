@@ -1,7 +1,7 @@
 % Introduction
 \begin{frame}{Introduction}{Surface Anomaly Detection: Why It Matters}
     \begin{itemize}
-        \item Where applied, surface anomaly detection often outperforms humans in both specififity and sensitivity while simulatniously reducing costs
+        \item Where applied, surface anomaly detection often outperforms humans in both specificity and sensitivity while simultaneously reducing costs
         \pause
         \begin{itemize}
             \item Why is it not applied everywhere?
@@ -28,7 +28,7 @@
     \begin{itemize}
         \item<1-> OOD-Samples are often rare and diverse
         \item<2-> Data collection for pixel accurate anomaly detection is hard
-        \item<3-> Relyance on only normal data is preferred
+        \item<3-> Reliance on only normal data is preferred
         \begin{columns}
             \begin{column}{0.4\textwidth}
                 \begin{enumerate}
@@ -92,7 +92,7 @@
                     \item Distinguish between crack, corrosion or just paint
                 \end{itemize}
                 \item We don't need expensive hand-labeled data
-                \item We only need just-out-of-distribution patters for anomaly generation
+                \item We only need just-out-of-distribution patterns for anomaly generation
             \end{itemize}
         \end{column}
         \begin{column}{0.5\textwidth}
@@ -106,9 +106,9 @@
     \end{columns}
 \end{frame}
 
-\begin{frame}{Limitation \& Extension}{Where to go form Here}
+\begin{frame}{Limitation \& Extension}{Where to go from Here}
     \begin{itemize}[<+->]
-        \item The method lacks performance in cases, where domain knowledge is necessary to perform well
+        \item The method lacks performance in cases where domain knowledge is necessary to perform well
         \item For example here the whole lead of the transistor is cut off, but it only marks the position of the cut
         \begin{figure}
             \centering
@@ -116,7 +116,7 @@
         \end{figure}
         \item Another example could be when certain "normalities" are underrepresented in the training data
         \begin{itemize}
-            \item DRÆM may detect stains on walls as anomalies, while only structural damange should be detected
+            \item DRÆM may detect stains on walls as anomalies, while only structural damage should be detected
             \item In these cases finetuning the discriminative network may improve performance
         \end{itemize}
     \end{itemize}
