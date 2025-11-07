@@ -22,7 +22,6 @@ def init_wandb_run(
     team: str = "team-cr",
     args: dict = None
 ):
-    config = args
     with contextlib.redirect_stdout(StringIO()):
         run = wandb.init(
             project=project,
@@ -56,9 +55,7 @@ def train_on_device(obj_names, args):
 
     for obj_name in obj_names:
 
-        run_name = 'DRAEM_base_' + '_'.join(obj_names) + '_lr' + str(args.lr) + '_bs' + str(args.bs) + '_ep' + str(args.epochs)
-
-    # Images will be logged to Weights & Biases instead of TensorBoard.
+        run_name = 'base_' + '_'.join(obj_names) + '_lr' + str(args.lr) + '_bs' + str(args.bs) + '_ep' + str(args.epochs)
 
         model = ReconstructiveSubNetwork(in_channels=3, out_channels=3)
         model.cuda()
@@ -87,8 +84,8 @@ def train_on_device(obj_names, args):
         test_dataloader = DataLoader(test_dataset, batch_size=1, shuffle=False, num_workers=4)
 
         config = vars(args)
-        config.update({"train_dataset_size": len(train_dataset), "test_dataset_size": len(test_dataset), })
-        run = init_wandb_run( run_name=run_name, config=config, tags=["baseline"],)
+        config.update({"train_dataset_size": len(train_dataset), "test_dataset_size": len(test_dataset), "obj_name": obj_name})
+        run = init_wandb_run(run_name=run_name, config=config, tags=["baseline"],)
 
         for epoch in range(args.epochs):
             print("Epoch: "+str(epoch))

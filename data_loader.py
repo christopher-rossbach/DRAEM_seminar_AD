@@ -46,6 +46,7 @@ class MVTecDRAEMTestDataset(Dataset):
 
     def transform_image(self, image_path, mask_path):
         image = cv2.imread(image_path, cv2.IMREAD_COLOR)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         if mask_path is not None:
             mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
         else:
@@ -95,6 +96,7 @@ class MVTecDRAEMTrainDataset(Dataset):
         self.images = []
         for img_path in self.image_paths:
             image = cv2.imread(img_path)
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             image = cv2.resize(image, dsize=(self.resize_shape[1], self.resize_shape[0]))
             image = np.array(image).reshape((image.shape[0], image.shape[1], image.shape[2])).astype(np.float32) / 255.0
             self.images.append(image)
@@ -104,6 +106,7 @@ class MVTecDRAEMTrainDataset(Dataset):
         self.anomaly_source_images = []
         for anomaly_path in self.anomaly_source_paths:
             anomaly_img = cv2.imread(anomaly_path)
+            anomaly_img = cv2.cvtColor(anomaly_img, cv2.COLOR_BGR2RGB)
             anomaly_img = cv2.resize(anomaly_img, dsize=(self.resize_shape[1], self.resize_shape[0]))
             self.anomaly_source_images.append(anomaly_img)
         print(f"Finished loading anomaly source images.")
