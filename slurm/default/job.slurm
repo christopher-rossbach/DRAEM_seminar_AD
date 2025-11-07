@@ -1,6 +1,6 @@
 #!/bin/bash -xl
 #
-#SBATCH --gres=gpu::1
+#SBATCH --gres=gpu:rtx2080ti:1
 #SBATCH --time=01:00:00
 #SBATCH --output=./slurm/train_victim/logs/%x.%j.log
 
