@@ -4,10 +4,10 @@
 
 # Grid search parameters
 BATCH_SIZES=(8)
-LRS=(0.0001)
+LRS=(0.0005)
 EPOCHS=(700)
-OBJ_IDS=(0 1 2 3 4 5 6 7 8)
-EXTRA_TAGS="baseline"
+OBJ_IDS=(0 1)
+EXTRA_TAGS="baseline,cosine_annealing_lr"
 #OBJ_IDS=(0)
 
 # Parse arguments
