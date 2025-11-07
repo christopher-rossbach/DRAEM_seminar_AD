@@ -11,8 +11,35 @@ class MVTecDRAEMTestDataset(Dataset):
 
     def __init__(self, root_dir, resize_shape=None):
         self.root_dir = root_dir
-        self.images = sorted(glob.glob(root_dir+"/*/*.png"))
+        self.image_paths = sorted(glob.glob(root_dir+"/*/*.png"))
         self.resize_shape=resize_shape
+        
+        # Preload all images and masks during initialization
+        print(f"Loading {len(self.image_paths)} test images into memory...")
+        self.images = []
+        self.masks = []
+        self.has_anomalies = []
+        
+        for img_path in self.image_paths:
+            dir_path, file_name = os.path.split(img_path)
+            base_dir = os.path.basename(dir_path)
+            
+            if base_dir == 'good':
+                image, mask = self.transform_image(img_path, None)
+                has_anomaly = np.array([0], dtype=np.float32)
+            else:
+                mask_path = os.path.join(dir_path, '../../ground_truth/')
+                mask_path = os.path.join(mask_path, base_dir)
+                mask_file_name = file_name.split(".")[0]+"_mask.png"
+                mask_path = os.path.join(mask_path, mask_file_name)
+                image, mask = self.transform_image(img_path, mask_path)
+                has_anomaly = np.array([1], dtype=np.float32)
+            
+            self.images.append(image)
+            self.masks.append(mask)
+            self.has_anomalies.append(has_anomaly)
+        
+        print(f"Finished loading test images into memory.")
 
     def __len__(self):
         return len(self.images)
@@ -41,21 +68,8 @@ class MVTecDRAEMTestDataset(Dataset):
         if torch.is_tensor(idx):
             idx = idx.tolist()
 
-        img_path = self.images[idx]
-        dir_path, file_name = os.path.split(img_path)
-        base_dir = os.path.basename(dir_path)
-        if base_dir == 'good':
-            image, mask = self.transform_image(img_path, None)
-            has_anomaly = np.array([0], dtype=np.float32)
-        else:
-            mask_path = os.path.join(dir_path, '../../ground_truth/')
-            mask_path = os.path.join(mask_path, base_dir)
-            mask_file_name = file_name.split(".")[0]+"_mask.png"
-            mask_path = os.path.join(mask_path, mask_file_name)
-            image, mask = self.transform_image(img_path, mask_path)
-            has_anomaly = np.array([1], dtype=np.float32)
-
-        sample = {'image': image, 'has_anomaly': has_anomaly,'mask': mask, 'idx': idx}
+        sample = {'image': self.images[idx], 'has_anomaly': self.has_anomalies[idx], 
+                  'mask': self.masks[idx], 'idx': idx}
 
         return sample
 
@@ -74,8 +88,25 @@ class MVTecDRAEMTrainDataset(Dataset):
         self.resize_shape=resize_shape
 
         self.image_paths = sorted(glob.glob(root_dir+"/*.png"))
-
         self.anomaly_source_paths = sorted(glob.glob(anomaly_source_path+"/*/*.jpg"))
+
+        # Preload all training images and anomaly sources into memory
+        print(f"Loading {len(self.image_paths)} training images into memory...")
+        self.images = []
+        for img_path in self.image_paths:
+            image = cv2.imread(img_path)
+            image = cv2.resize(image, dsize=(self.resize_shape[1], self.resize_shape[0]))
+            image = np.array(image).reshape((image.shape[0], image.shape[1], image.shape[2])).astype(np.float32) / 255.0
+            self.images.append(image)
+        print(f"Finished loading training images.")
+        
+        print(f"Loading {len(self.anomaly_source_paths)} anomaly source images into memory...")
+        self.anomaly_source_images = []
+        for anomaly_path in self.anomaly_source_paths:
+            anomaly_img = cv2.imread(anomaly_path)
+            anomaly_img = cv2.resize(anomaly_img, dsize=(self.resize_shape[1], self.resize_shape[0]))
+            self.anomaly_source_images.append(anomaly_img)
+        print(f"Finished loading anomaly source images.")
 
         self.augmenters = [iaa.GammaContrast((0.5,2.0),per_channel=True),
                       iaa.MultiplyAndAddToBrightness(mul=(0.8,1.2),add=(-30,30)),
@@ -93,7 +124,7 @@ class MVTecDRAEMTrainDataset(Dataset):
 
 
     def __len__(self):
-        return len(self.image_paths)
+        return len(self.images)
 
 
     def randAugmenter(self):
@@ -104,12 +135,10 @@ class MVTecDRAEMTrainDataset(Dataset):
                              )
         return aug
 
-    def augment_image(self, image, anomaly_source_path):
+    def augment_image(self, image, anomaly_source_img):
         aug = self.randAugmenter()
         perlin_scale = 6
         min_perlin_scale = 0
-        anomaly_source_img = cv2.imread(anomaly_source_path)
-        anomaly_source_img = cv2.resize(anomaly_source_img, dsize=(self.resize_shape[1], self.resize_shape[0]))
 
         anomaly_img_augmented = aug(image=anomaly_source_img)
         perlin_scalex = 2 ** (torch.randint(min_perlin_scale, perlin_scale, (1,)).numpy()[0])
@@ -141,26 +170,25 @@ class MVTecDRAEMTrainDataset(Dataset):
                 has_anomaly=0.0
             return augmented_image, msk, np.array([has_anomaly],dtype=np.float32)
 
-    def transform_image(self, image_path, anomaly_source_path):
-        image = cv2.imread(image_path)
-        image = cv2.resize(image, dsize=(self.resize_shape[1], self.resize_shape[0]))
-
+    def transform_image(self, image, anomaly_source_img):
         do_aug_orig = torch.rand(1).numpy()[0] > 0.7
         if do_aug_orig:
             image = self.rot(image=image)
 
-        image = np.array(image).reshape((image.shape[0], image.shape[1], image.shape[2])).astype(np.float32) / 255.0
-        augmented_image, anomaly_mask, has_anomaly = self.augment_image(image, anomaly_source_path)
+        image = np.array(image).reshape((image.shape[0], image.shape[1], image.shape[2])).astype(np.float32)
+        augmented_image, anomaly_mask, has_anomaly = self.augment_image(image, anomaly_source_img)
         augmented_image = np.transpose(augmented_image, (2, 0, 1))
         image = np.transpose(image, (2, 0, 1))
         anomaly_mask = np.transpose(anomaly_mask, (2, 0, 1))
         return image, augmented_image, anomaly_mask, has_anomaly
 
     def __getitem__(self, idx):
-        idx = torch.randint(0, len(self.image_paths), (1,)).item()
-        anomaly_source_idx = torch.randint(0, len(self.anomaly_source_paths), (1,)).item()
-        image, augmented_image, anomaly_mask, has_anomaly = self.transform_image(self.image_paths[idx],
-                                                                           self.anomaly_source_paths[anomaly_source_idx])
+        idx = torch.randint(0, len(self.images), (1,)).item()
+        anomaly_source_idx = torch.randint(0, len(self.anomaly_source_images), (1,)).item()
+        image, augmented_image, anomaly_mask, has_anomaly = self.transform_image(
+            self.images[idx].copy(),
+            self.anomaly_source_images[anomaly_source_idx].copy()
+        )
         sample = {'image': image, "anomaly_mask": anomaly_mask,
                   'augmented_image': augmented_image, 'has_anomaly': has_anomaly, 'idx': idx}
 
