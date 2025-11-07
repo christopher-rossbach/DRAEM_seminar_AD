@@ -1,0 +1,35 @@
+name: draem
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.8
+  - pip
+  - numpy>=1.19
+  - scipy
+  - matplotlib
+  - pillow
+  - opencv
+  - scikit-image
+  - scikit-learn
+  - imageio
+  - tqdm
+  - h5py
+  - notebook
+  - wandb
+  - pytorch::pytorch=1.13.1
+  - pytorch::torchvision=0.14.1
+  - pytorch::torchaudio=0.13.1
+  - pytorch::pytorch-cuda=11.7
+  - tensorboard
+  - pip:
+    - imgaug
+    - opencv-python
+    - imageio
+    - google-auth
+    - google-auth-oauthlib
+    - cachetools
+    - typing_extensions
+
