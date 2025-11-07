@@ -2,6 +2,8 @@ import contextlib
 import json
 from io import StringIO
 import time
+import math
+import numpy as np
 import torch
 import wandb
 from test_DRAEM import evaluate_model_performance
@@ -78,14 +80,36 @@ def train_on_device(obj_names, args):
 
         train_dataset = MVTecDRAEMTrainDataset(args.data_path + obj_name + "/train/good/", args.anomaly_source_path, resize_shape=[img_dim, img_dim])
 
-        train_dataloader = DataLoader(train_dataset, batch_size=args.bs, shuffle=True, num_workers=8)
+        # Gradient accumulation: use micro-batch size 4, accumulate until args.bs samples then optimizer.step
+        micro_batch_size = 4 if args.bs >= 4 else args.bs
+        if args.bs % micro_batch_size != 0:
+            raise ValueError(f"Batch size {args.bs} must be divisible by micro_batch_size {micro_batch_size}")
+
+        train_dataloader = DataLoader(train_dataset, batch_size=micro_batch_size, shuffle=True, num_workers=8)
 
         test_dataset = MVTecDRAEMTestDataset(args.data_path + obj_name + "/test/", resize_shape=[img_dim, img_dim])
         test_dataloader = DataLoader(test_dataset, batch_size=1, shuffle=False, num_workers=4)
 
         config = vars(args)
-        config.update({"train_dataset_size": len(train_dataset), "test_dataset_size": len(test_dataset), "obj_name": obj_name})
-        run = init_wandb_run(run_name=run_name, config=config, tags=["baseline"],)
+        config.update({
+            "train_dataset_size": len(train_dataset),
+            "test_dataset_size": len(test_dataset),
+            "obj_name": obj_name,
+            "micro_batch_size": micro_batch_size,
+        })
+        # Merge default and user-supplied tags
+        default_tags = ["train_draem"]
+        extra_tags = []
+        if getattr(args, "extra_tags", None):
+            # Accept comma-separated string or repeated flags
+            if isinstance(args.extra_tags, list):
+                for item in args.extra_tags:
+                    extra_tags.extend([t.strip() for t in item.split(",") if t.strip()])
+            else:
+                extra_tags = [t.strip() for t in str(args.extra_tags).split(",") if t.strip()]
+        merged_tags = list(dict.fromkeys(extra_tags + default_tags))  # dedupe preserving order
+
+        run = init_wandb_run(run_name=run_name, config=config, tags=merged_tags,)
 
         for epoch in range(args.epochs):
             print("Epoch: "+str(epoch))
@@ -93,39 +117,50 @@ def train_on_device(obj_names, args):
             forward_times = []
             backward_times = []
             data_load_times = []
+            l2_losses = []
+            ssim_losses = []
+            seg_losses = []
+            total_batches = len(train_dataloader)
+            micro_batches_per_batch = math.ceil(args.bs / micro_batch_size)
+            optimizer.zero_grad()
+            processed_in_group = 0  # samples accumulated toward next optimizer step
             
-            batch_iter = iter(train_dataloader)
-            for i_batch in range(len(train_dataloader)):
+            for i_batch, sample_batched in enumerate(train_dataloader):
                 data_start = time.time()
-                sample_batched = next(batch_iter)
-                data_load_times.append(time.time() - data_start)
-                
                 gray_batch = sample_batched["image"].cuda()
                 aug_gray_batch = sample_batched["augmented_image"].cuda()
                 anomaly_mask = sample_batched["anomaly_mask"].cuda()
+                data_load_times.append(time.time() - data_start)
 
                 forward_start = time.time()
                 gray_rec = model(aug_gray_batch)
                 joined_in = torch.cat((gray_rec, aug_gray_batch), dim=1)
-
                 out_mask = model_seg(joined_in)
                 out_mask_sm = torch.softmax(out_mask, dim=1)
 
-                l2_loss = loss_l2(gray_rec,gray_batch)
+                l2_loss = loss_l2(gray_rec, gray_batch)
                 ssim_loss = loss_ssim(gray_rec, gray_batch)
-
                 segment_loss = loss_focal(out_mask_sm, anomaly_mask)
                 loss = l2_loss + ssim_loss + segment_loss
                 forward_times.append(time.time() - forward_start)
 
-                backward_start = time.time()
-                optimizer.zero_grad()
+                batch_size_actual = gray_batch.size(0)
+                processed_in_group += batch_size_actual
+                scale_factor = batch_size_actual / args.bs
+                scaled_loss = loss * scale_factor
+                scaled_loss.backward()
 
-                loss.backward()
-                optimizer.step()
-                backward_times.append(time.time() - backward_start)
-                
+                l2_losses.append(l2_loss.item())
+                ssim_losses.append(ssim_loss.item())
+                seg_losses.append(segment_loss.item())
 
+                last_batch = (i_batch + 1 == total_batches)
+                if processed_in_group >= args.bs or last_batch:
+                    backward_start = time.time()
+                    optimizer.step()
+                    optimizer.zero_grad()
+                    backward_times.append(time.time() - backward_start)
+                    processed_in_group = 0
             start_evaluation_time = time.time()
             eval_results = None
             with torch.no_grad():
@@ -135,13 +170,19 @@ def train_on_device(obj_names, args):
             auroc, ap, auroc_pixel, ap_pixel, display_images, display_gt_images, display_out_masks, display_in_masks = eval_results
 
             epoch_time = time.time() - start_time
-            train_size = len(train_dataloader)
-            eval_size = len(test_dataloader)
+            eval_time = time.time() - start_evaluation_time
+            train_size = len(train_dataset)
+            eval_size = len(test_dataset)
+
+            # Aggregate average losses over micro-batches
+            avg_l2 = float(np.mean(l2_losses)) if l2_losses else 0.0
+            avg_ssim = float(np.mean(ssim_losses)) if ssim_losses else 0.0
+            avg_seg = float(np.mean(seg_losses)) if seg_losses else 0.0
 
             log_data = {
-                "train/l2_loss": l2_loss.item(),
-                "train/ssim_loss": ssim_loss.item(),
-                "train/segment_loss": segment_loss.item(),
+                "train/l2_loss": avg_l2,
+                "train/ssim_loss": avg_ssim,
+                "train/segment_loss": avg_seg,
                 "train/lr": get_lr(optimizer),
                 "eval/auroc_image": auroc,
                 "eval/ap_image": ap,
@@ -152,7 +193,7 @@ def train_on_device(obj_names, args):
                 "time/forward_passes": sum(forward_times) / train_size,
                 "time/backwards_passes": sum(backward_times) / train_size,
                 "time/per_sample": epoch_time / train_size,
-                "time/evaluation": (time.time() - start_evaluation_time) / eval_size,
+                "time/evaluation": eval_time / eval_size,
             }
             run.log(log_data, step=epoch)
             print(json.dumps(log_data, indent=4))
@@ -207,8 +248,13 @@ if __name__=="__main__":
     parser.add_argument('--checkpoint_path', action='store', type=str, required=True)
     parser.add_argument('--log_path', action='store', type=str, required=True)
     parser.add_argument('--visualize', action='store_true')
+    parser.add_argument('--extra_tags', action='append', default=None, help='Additional W&B tags. Use multiple --extra_tags or a single comma-separated string.', required=False)
 
     args = parser.parse_args()
+
+    if args.extra_tags is None:
+        args.extra_tags = ["no_tag"]
+
 
     obj_batch = [['capsule'],
                  ['bottle'],
