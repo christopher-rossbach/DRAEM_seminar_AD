@@ -1,17 +1,20 @@
-name: draem
+name: draem2
 channels:
   - pytorch
   - nvidia
   - conda-forge
   - defaults
 dependencies:
-  - python=3.8
+  # PyTorch 2.9 & CUDA 12.8 not yet available on public conda channels (as of Nov 2025)
+  # Using latest broadly available stable combo instead.
+  - python=3.10
   - pip
-  - numpy>=1.19
+  # Pin numpy below 2.0 because current imgaug release still references np.sctypes (removed in NumPy 2.0)
+  - numpy=1.26.*
   - scipy
   - matplotlib
   - pillow
-  - opencv
+  # Remove conda opencv to avoid libopencv/ffmpeg conflicts; use pip headless build.
   - scikit-image
   - scikit-learn
   - imageio
@@ -19,14 +22,16 @@ dependencies:
   - h5py
   - notebook
   - wandb
-  - pytorch::pytorch=1.13.1
-  - pytorch::torchvision=0.14.1
-  - pytorch::torchaudio=0.13.1
-  - pytorch::pytorch-cuda=11.7
+  # PyTorch stack (closest available) + CUDA 12.4 runtime.
+  - pytorch::pytorch=2.5.*
+  - pytorch::torchvision=0.20.*
+  - pytorch::torchaudio=2.5.*
+  - pytorch::pytorch-cuda=12.4
   - tensorboard
   - pip:
     - imgaug
-    - opencv-python
+    # Pin OpenCV headless to version compatible with NumPy 1.x (avoid 4.12.0 requiring NumPy>=2)
+    - opencv-python-headless==4.8.1.78
     - imageio
     - google-auth
     - google-auth-oauthlib

@@ -6,8 +6,8 @@
 BATCH_SIZES=(8)
 LRS=(0.0001)
 EPOCHS=(700)
-OBJ_IDS=(0)
-EXTRA_TAGS="baseline,optimizations,slurm"
+OBJ_IDS=(9 10 11 12 13 14)
+EXTRA_TAGS="baseline,test_para"
 EXTRA_FLAGS=("")
 #OBJ_IDS=(0)
 
@@ -44,9 +44,9 @@ for BATCH_SIZE in "${BATCH_SIZES[@]}"; do
 		for EPOCH in "${EPOCHS[@]}"; do
 			for OBJ_ID in "${OBJ_IDS[@]}"; do
 				for EXTRA_FLAG in "${EXTRA_FLAGS[@]}"; do
-					echo "sbatch job.slurm --bs $BATCH_SIZE --epochs $EPOCH --lr $LR --obj_id $OBJ_ID $EXTRA_FLAG --extra_tags \"$EXTRA_TAGS\""
+					echo "sbatch job.slurm $OBJ_ID --bs $BATCH_SIZE --epochs $EPOCH --lr $LR $EXTRA_FLAG --extra_tags \"$EXTRA_TAGS\""
 					if [ "$DRY_RUN" -eq 0 ]; then
-						sbatch.tinygpu $DIR/job.slurm --bs $BATCH_SIZE --epochs $EPOCH --lr $LR --obj_id $OBJ_ID $EXTRA_FLAG --extra_tags "$EXTRA_TAGS"
+						sbatch.tinygpu $DIR/job.slurm $OBJ_ID --bs $BATCH_SIZE --epochs $EPOCH --lr $LR $EXTRA_FLAG --extra_tags "$EXTRA_TAGS"
 					fi
 				done
 			done

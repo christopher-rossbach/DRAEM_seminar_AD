@@ -49,7 +49,7 @@ def weights_init(m):
         m.weight.data.normal_(1.0, 0.02)
         m.bias.data.fill_(0)
 
-def train_on_device(obj_names, args):
+def train_on_device(obj_names, args, tags):
     if not os.path.exists(args.checkpoint_path):
         os.makedirs(args.checkpoint_path)
 
@@ -68,8 +68,7 @@ def train_on_device(obj_names, args):
         model_seg.cuda()
         model_seg.apply(weights_init)
 
-        optimizer = torch.optim.Adam([
-                                      {"params": model.parameters(), "lr": args.lr},
+        optimizer = torch.optim.Adam([{"params": model.parameters(), "lr": args.lr},
                                       {"params": model_seg.parameters(), "lr": args.lr}])
 
         scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=0)
@@ -82,7 +81,7 @@ def train_on_device(obj_names, args):
         train_dataset = MVTecDRAEMTrainDataset(args.data_path + obj_name + "/train/good/", args.anomaly_source_path, resize_shape=[img_dim, img_dim])
 
         # Gradient accumulation: use micro-batch size 4, accumulate until args.bs samples then optimizer.step
-        micro_batch_size = 4 if args.bs >= 4 else args.bs
+        micro_batch_size = args.micro_batch_size if args.bs >= 4 else args.bs
         if args.bs % micro_batch_size != 0:
             raise ValueError(f"Batch size {args.bs} must be divisible by micro_batch_size {micro_batch_size}")
 
@@ -96,24 +95,12 @@ def train_on_device(obj_names, args):
             "train_dataset_size": len(train_dataset),
             "test_dataset_size": len(test_dataset),
             "obj_name": obj_name,
-            "micro_batch_size": micro_batch_size,
             "slurm_job_id": os.environ.get("SLURM_JOB_ID", "N/A"),
             "hostname": os.environ.get("HOSTNAME", "N/A"),
             "gpu_type": torch.cuda.get_device_name(args.gpu_id) if torch.cuda.is_available() else "N/A",
         })
-        # Merge default and user-supplied tags
-        default_tags = ["train_draem"]
-        extra_tags = []
-        if getattr(args, "extra_tags", None):
-            # Accept comma-separated string or repeated flags
-            if isinstance(args.extra_tags, list):
-                for item in args.extra_tags:
-                    extra_tags.extend([t.strip() for t in item.split(",") if t.strip()])
-            else:
-                extra_tags = [t.strip() for t in str(args.extra_tags).split(",") if t.strip()]
-        merged_tags = list(dict.fromkeys(extra_tags + default_tags))  # dedupe preserving order
 
-        run = init_wandb_run(run_name=run_name, config=config, tags=merged_tags,)
+        run = init_wandb_run(run_name=run_name, config=config, tags=tags,)
 
         # Optional torch.compile (PyTorch 2.x). Can significantly speed up training for stable shapes.
         if getattr(args, "compile", False) and hasattr(torch, "compile"):
@@ -266,6 +253,7 @@ def train_on_device(obj_names, args):
 
 
             scheduler.step()
+
         run.finish()
 
 
@@ -275,6 +263,7 @@ if __name__=="__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--obj_id', action='store', type=int, required=True)
     parser.add_argument('--bs', action='store', type=int, required=True)
+    parser.add_argument('--micro_batch_size', action='store', default=4, type=int, required=False)
     parser.add_argument('--lr', action='store', type=float, required=True)
     parser.add_argument('--epochs', action='store', type=int, required=True)
     parser.add_argument('--gpu_id', action='store', type=int, default=0, required=False)
@@ -331,6 +320,18 @@ if __name__=="__main__":
     else:
         picked_classes = obj_batch[int(args.obj_id)]
 
+    # Merge default and user-supplied tags
+    default_tags = ["train_draem"]
+    extra_tags = []
+    if getattr(args, "extra_tags", None):
+        # Accept comma-separated string or repeated flags
+        if isinstance(args.extra_tags, list):
+            for item in args.extra_tags:
+                extra_tags.extend([t.strip() for t in item.split(",") if t.strip()])
+        else:
+            extra_tags = [t.strip() for t in str(args.extra_tags).split(",") if t.strip()]
+    tags = list(dict.fromkeys(extra_tags + default_tags))  # dedupe preserving order
+
     with torch.cuda.device(args.gpu_id):
-        train_on_device(picked_classes, args)
+        train_on_device(picked_classes, args, tags)
 
