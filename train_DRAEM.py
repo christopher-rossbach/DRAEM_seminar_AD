@@ -14,6 +14,7 @@ import torchvision
 from model_unet import ReconstructiveSubNetwork, DiscriminativeSubNetwork
 from loss import FocalLoss, SSIM
 import os
+import warnings
 
 def init_wandb_run(
     run_name: str,
@@ -96,6 +97,9 @@ def train_on_device(obj_names, args):
             "test_dataset_size": len(test_dataset),
             "obj_name": obj_name,
             "micro_batch_size": micro_batch_size,
+            "slurm_job_id": os.environ.get("SLURM_JOB_ID", "N/A"),
+            "hostname": os.environ.get("HOSTNAME", "N/A"),
+            "gpu_type": torch.cuda.get_device_name(args.gpu_id) if torch.cuda.is_available() else "N/A",
         })
         # Merge default and user-supplied tags
         default_tags = ["train_draem"]
@@ -111,6 +115,16 @@ def train_on_device(obj_names, args):
 
         run = init_wandb_run(run_name=run_name, config=config, tags=merged_tags,)
 
+        # Optional torch.compile (PyTorch 2.x). Can significantly speed up training for stable shapes.
+        if getattr(args, "compile", False) and hasattr(torch, "compile"):
+            try:
+                model = torch.compile(model)
+                model_seg = torch.compile(model_seg)
+            except Exception as _e:
+                warnings.warn(f"torch.compile failed; continuing without it: {_e}")
+
+        scaler = torch.cuda.amp.GradScaler(enabled=args.amp)
+
         for epoch in range(args.epochs):
             print("Epoch: "+str(epoch))
             start_time = time.time()
@@ -122,33 +136,44 @@ def train_on_device(obj_names, args):
             seg_losses = []
             total_batches = len(train_dataloader)
             micro_batches_per_batch = math.ceil(args.bs / micro_batch_size)
-            optimizer.zero_grad()
+            optimizer.zero_grad(set_to_none=True)
             processed_in_group = 0  # samples accumulated toward next optimizer step
             
             for i_batch, sample_batched in enumerate(train_dataloader):
                 data_start = time.time()
-                gray_batch = sample_batched["image"].cuda()
-                aug_gray_batch = sample_batched["augmented_image"].cuda()
-                anomaly_mask = sample_batched["anomaly_mask"].cuda()
+                gray_batch = sample_batched["image"].cuda(non_blocking=True)
+                aug_gray_batch = sample_batched["augmented_image"].cuda(non_blocking=True)
+                anomaly_mask = sample_batched["anomaly_mask"].cuda(non_blocking=True)
                 data_load_times.append(time.time() - data_start)
 
                 forward_start = time.time()
-                gray_rec = model(aug_gray_batch)
-                joined_in = torch.cat((gray_rec, aug_gray_batch), dim=1)
-                out_mask = model_seg(joined_in)
-                out_mask_sm = torch.softmax(out_mask, dim=1)
+                with torch.cuda.amp.autocast(enabled=args.amp):
+                    gray_rec = model(aug_gray_batch)
+                    joined_in = torch.cat((gray_rec, aug_gray_batch), dim=1)
+                    out_mask = model_seg(joined_in)
+                    out_mask_sm = torch.softmax(out_mask, dim=1)
 
-                l2_loss = loss_l2(gray_rec, gray_batch)
-                ssim_loss = loss_ssim(gray_rec, gray_batch)
-                segment_loss = loss_focal(out_mask_sm, anomaly_mask)
-                loss = l2_loss + ssim_loss + segment_loss
+                # Compute losses in FP32 for numerical stability (especially SSIM)
+                with torch.cuda.amp.autocast(enabled=False):
+                    # Cast to float32 if AMP was used
+                    gray_rec_loss = gray_rec.float() if args.amp else gray_rec
+                    gray_batch_loss = gray_batch.float()
+                    out_mask_sm_loss = out_mask_sm.float() if args.amp else out_mask_sm
+                    
+                    l2_loss = loss_l2(gray_rec_loss, gray_batch_loss)
+                    ssim_loss = loss_ssim(gray_rec_loss, gray_batch_loss)
+                    segment_loss = loss_focal(out_mask_sm_loss, anomaly_mask)
+                    loss = l2_loss + ssim_loss + segment_loss
                 forward_times.append(time.time() - forward_start)
 
                 batch_size_actual = gray_batch.size(0)
                 processed_in_group += batch_size_actual
                 scale_factor = batch_size_actual / args.bs
                 scaled_loss = loss * scale_factor
-                scaled_loss.backward()
+                if args.amp:
+                    scaler.scale(scaled_loss).backward()
+                else:
+                    scaled_loss.backward()
 
                 l2_losses.append(l2_loss.item())
                 ssim_losses.append(ssim_loss.item())
@@ -157,8 +182,18 @@ def train_on_device(obj_names, args):
                 last_batch = (i_batch + 1 == total_batches)
                 if processed_in_group >= args.bs or last_batch:
                     backward_start = time.time()
-                    optimizer.step()
-                    optimizer.zero_grad()
+                    if args.amp:
+                        # Gradient clipping before optimizer step for stability
+                        scaler.unscale_(optimizer)
+                        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                        torch.nn.utils.clip_grad_norm_(model_seg.parameters(), max_norm=1.0)
+                        scaler.step(optimizer)
+                        scaler.update()
+                    else:
+                        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                        torch.nn.utils.clip_grad_norm_(model_seg.parameters(), max_norm=1.0)
+                        optimizer.step()
+                    optimizer.zero_grad(set_to_none=True)
                     backward_times.append(time.time() - backward_start)
                     processed_in_group = 0
             start_evaluation_time = time.time()
@@ -200,11 +235,11 @@ def train_on_device(obj_names, args):
             t_mask = out_mask_sm[:, 1:, :, :]
 
             if epoch % 20 == 0 or epoch == args.epochs - 1 or epoch < 5 or epoch == 10:
-                img_grid_aug = torchvision.utils.make_grid(aug_gray_batch.detach().cpu(), normalize=True, scale_each=True)
-                img_grid_target = torchvision.utils.make_grid(gray_batch.detach().cpu(), normalize=True, scale_each=True)
-                img_grid_out = torchvision.utils.make_grid(gray_rec.detach().cpu(), normalize=True, scale_each=True)
-                mask_grid_target = torchvision.utils.make_grid(anomaly_mask.detach().cpu(), normalize=False)
-                mask_grid_out = torchvision.utils.make_grid(t_mask.detach().cpu(), normalize=False)
+                img_grid_aug = torchvision.utils.make_grid(aug_gray_batch.detach().float().cpu(), normalize=True, scale_each=True)
+                img_grid_target = torchvision.utils.make_grid(gray_batch.detach().float().cpu(), normalize=True, scale_each=True)
+                img_grid_out = torchvision.utils.make_grid(gray_rec.detach().float().cpu(), normalize=True, scale_each=True)
+                mask_grid_target = torchvision.utils.make_grid(anomaly_mask.detach().float().cpu(), normalize=False)
+                mask_grid_out = torchvision.utils.make_grid(t_mask.detach().float().cpu(), normalize=False)
 
                 run.log({
                     "images/batch_augmented": wandb.Image(img_grid_aug),
@@ -214,10 +249,10 @@ def train_on_device(obj_names, args):
                     "images/mask_out": wandb.Image(mask_grid_out),
                 }, step=epoch)
 
-                eval_grid_recon_out = torchvision.utils.make_grid(display_images, normalize=True, scale_each=True)
-                eval_grid_recon_target = torchvision.utils.make_grid(display_gt_images, normalize=True, scale_each=True)
-                eval_grid_mask_out = torchvision.utils.make_grid(display_out_masks, normalize=False)
-                eval_grid_mask_target = torchvision.utils.make_grid(display_in_masks, normalize=False)
+                eval_grid_recon_out = torchvision.utils.make_grid(display_images.float(), normalize=True, scale_each=True)
+                eval_grid_recon_target = torchvision.utils.make_grid(display_gt_images.float(), normalize=True, scale_each=True)
+                eval_grid_mask_out = torchvision.utils.make_grid(display_out_masks.float(), normalize=False)
+                eval_grid_mask_target = torchvision.utils.make_grid(display_in_masks.float(), normalize=False)
 
                 run.log({
                     "images/eval/recon_out_grid": wandb.Image(eval_grid_recon_out),
@@ -249,6 +284,8 @@ if __name__=="__main__":
     parser.add_argument('--log_path', action='store', type=str, required=True)
     parser.add_argument('--visualize', action='store_true')
     parser.add_argument('--extra_tags', action='append', default=None, help='Additional W&B tags. Use multiple --extra_tags or a single comma-separated string.', required=False)
+    parser.add_argument('--amp', action='store_true', default=False, help='Enable mixed precision (amp) for faster training and lower VRAM use.', required=False)
+    parser.add_argument('--compile', action='store_true', default=False, help='Use torch.compile (PyTorch 2.x) to JIT-compile the model.', required=False)
 
     args = parser.parse_args()
 

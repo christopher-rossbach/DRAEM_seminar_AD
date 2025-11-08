@@ -17,4 +17,4 @@ module load python/3.12-conda
 module load cuda/12.6
 
 conda activate draem
-python3 "$SLURM_SUBMIT_DIR/train_DRAEM.py" "${@:1}" --data_path "$SLURM_SUBMIT_DIR/datasets/mvtec/" --anomaly_source_path "$SLURM_SUBMIT_DIR/datasets/dtd/images/" --checkpoint_path "$SLURM_SUBMIT_DIR/checkpoints/" --log_path "$SLURM_SUBMIT_DIR/logs/"
+python3 "$SLURM_SUBMIT_DIR/train_DRAEM.py" "${@:1}" --data_path "$SLURM_SUBMIT_DIR/datasets/mvtec/" --anomaly_source_path "$SLURM_SUBMIT_DIR/datasets/dtd/images/" --checkpoint_path "$SLURM_SUBMIT_DIR/checkpoints/" --log_path "$SLURM_SUBMIT_DIR/logs/" --amp

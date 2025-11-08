@@ -4,10 +4,11 @@
 
 # Grid search parameters
 BATCH_SIZES=(8)
-LRS=(0.0005)
+LRS=(0.0001)
 EPOCHS=(700)
-OBJ_IDS=(0 1)
-EXTRA_TAGS="baseline,cosine_annealing_lr"
+OBJ_IDS=(0)
+EXTRA_TAGS="baseline,optimizations,slurm"
+EXTRA_FLAGS=("")
 #OBJ_IDS=(0)
 
 # Parse arguments
@@ -21,7 +22,7 @@ done
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Calculate total number of jobs
-NUM_JOBS=$(( ${#BATCH_SIZES[@]} * ${#LRS[@]} * ${#EPOCHS[@]} * ${#OBJ_IDS[@]} ))
+NUM_JOBS=$(( ${#BATCH_SIZES[@]} * ${#LRS[@]} * ${#EPOCHS[@]} * ${#OBJ_IDS[@]} * ${#EXTRA_FLAGS[@]} ))
 
 echo "Number of jobs to start: $NUM_JOBS"
 if [ "$NUM_JOBS" -gt 20 ]; then
@@ -42,10 +43,12 @@ for BATCH_SIZE in "${BATCH_SIZES[@]}"; do
 	for LR in "${LRS[@]}"; do
 		for EPOCH in "${EPOCHS[@]}"; do
 			for OBJ_ID in "${OBJ_IDS[@]}"; do
-				echo "sbatch job.slurm --bs $BATCH_SIZE --epochs $EPOCH --lr $LR --obj_id $OBJ_ID"
-				if [ "$DRY_RUN" -eq 0 ]; then
-					sbatch.tinygpu $DIR/job.slurm --bs $BATCH_SIZE --epochs $EPOCH --lr $LR --obj_id $OBJ_ID --extra_tags "$EXTRA_TAGS"
-				fi
+				for EXTRA_FLAG in "${EXTRA_FLAGS[@]}"; do
+					echo "sbatch job.slurm --bs $BATCH_SIZE --epochs $EPOCH --lr $LR --obj_id $OBJ_ID $EXTRA_FLAG --extra_tags \"$EXTRA_TAGS\""
+					if [ "$DRY_RUN" -eq 0 ]; then
+						sbatch.tinygpu $DIR/job.slurm --bs $BATCH_SIZE --epochs $EPOCH --lr $LR --obj_id $OBJ_ID $EXTRA_FLAG --extra_tags "$EXTRA_TAGS"
+					fi
+				done
 			done
 		done
 	done
