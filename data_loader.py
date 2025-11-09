@@ -78,12 +78,10 @@ class MVTecDRAEMTestDataset(Dataset):
 
 class MVTecDRAEMTrainDataset(Dataset):
 
-    def __init__(self, root_dir, anomaly_source_path, resize_shape=None):
+    def __init__(self, root_dir, anomaly_source_path, resize_shape=None, image_limit=None, texture_limit=None):
         """
         Args:
             root_dir (string): Directory with all the images.
-            transform (callable, optional): Optional transform to be applied
-                on a sample.
         """
         self.root_dir = root_dir
         self.resize_shape=resize_shape
@@ -94,7 +92,8 @@ class MVTecDRAEMTrainDataset(Dataset):
         # Preload all training images and anomaly sources into memory
         print(f"Loading {len(self.image_paths)} training images into memory...")
         self.images = []
-        for img_path in self.image_paths:
+        image_limit = min(image_limit, len(self.image_paths)) if image_limit is not None else len(self.image_paths)
+        for img_path in self.image_paths[:image_limit]:
             image = cv2.imread(img_path)
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             image = cv2.resize(image, dsize=(self.resize_shape[1], self.resize_shape[0]))
@@ -104,7 +103,8 @@ class MVTecDRAEMTrainDataset(Dataset):
         
         print(f"Loading {len(self.anomaly_source_paths)} anomaly source images into memory...")
         self.anomaly_source_images = []
-        for anomaly_path in self.anomaly_source_paths:
+        texture_limit = min(texture_limit, len(self.anomaly_source_paths)) if texture_limit is not None else len(self.anomaly_source_paths)
+        for anomaly_path in self.anomaly_source_paths[:texture_limit]:
             anomaly_img = cv2.imread(anomaly_path)
             anomaly_img = cv2.cvtColor(anomaly_img, cv2.COLOR_BGR2RGB)
             anomaly_img = cv2.resize(anomaly_img, dsize=(self.resize_shape[1], self.resize_shape[0]))

@@ -49,12 +49,26 @@ def weights_init(m):
         m.weight.data.normal_(1.0, 0.02)
         m.bias.data.fill_(0)
 
-def train_on_device(obj_names, args, tags):
+def train_on_device(args):
     if not os.path.exists(args.checkpoint_path):
         os.makedirs(args.checkpoint_path)
 
     if not os.path.exists(args.log_path):
         os.makedirs(args.log_path)
+    
+    obj_names = get_obj_id_list(args.obj_id)
+
+    # Merge default and user-supplied tags
+    default_tags = ["train_draem"]
+    extra_tags = []
+    if getattr(args, "extra_tags", None):
+        # Accept comma-separated string or repeated flags
+        if isinstance(args.extra_tags, list):
+            for item in args.extra_tags:
+                extra_tags.extend([t.strip() for t in item.split(",") if t.strip()])
+        else:
+            extra_tags = [t.strip() for t in str(args.extra_tags).split(",") if t.strip()]
+    tags = list(dict.fromkeys(extra_tags + default_tags))  # dedupe preserving order
 
     for obj_name in obj_names:
 
@@ -95,6 +109,7 @@ def train_on_device(obj_names, args, tags):
             "train_dataset_size": len(train_dataset),
             "test_dataset_size": len(test_dataset),
             "obj_name": obj_name,
+            "lr_scheduler": "cosine_annealing",
             "slurm_job_id": os.environ.get("SLURM_JOB_ID", "N/A"),
             "hostname": os.environ.get("HOSTNAME", "N/A"),
             "gpu_type": torch.cuda.get_device_name(args.gpu_id) if torch.cuda.is_available() else "N/A",
@@ -110,7 +125,7 @@ def train_on_device(obj_names, args, tags):
             except Exception as _e:
                 warnings.warn(f"torch.compile failed; continuing without it: {_e}")
 
-        scaler = torch.cuda.amp.GradScaler(enabled=args.amp)
+        scaler = torch.amp.GradScaler(enabled=args.amp)
 
         for epoch in range(args.epochs):
             print("Epoch: "+str(epoch))
@@ -134,14 +149,14 @@ def train_on_device(obj_names, args, tags):
                 data_load_times.append(time.time() - data_start)
 
                 forward_start = time.time()
-                with torch.cuda.amp.autocast(enabled=args.amp):
+                with torch.amp.autocast('cuda', enabled=args.amp):
                     gray_rec = model(aug_gray_batch)
                     joined_in = torch.cat((gray_rec, aug_gray_batch), dim=1)
                     out_mask = model_seg(joined_in)
                     out_mask_sm = torch.softmax(out_mask, dim=1)
 
                 # Compute losses in FP32 for numerical stability (especially SSIM)
-                with torch.cuda.amp.autocast(enabled=False):
+                with torch.amp.autocast('cuda', enabled=False):
                     # Cast to float32 if AMP was used
                     gray_rec_loss = gray_rec.float() if args.amp else gray_rec
                     gray_batch_loss = gray_batch.float()
@@ -256,32 +271,28 @@ def train_on_device(obj_names, args, tags):
 
         run.finish()
 
-
-if __name__=="__main__":
+def get_parser():
     import argparse
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--obj_id', action='store', type=int, required=True)
-    parser.add_argument('--bs', action='store', type=int, required=True)
+    parser.add_argument('--bs', action='store', default=8, type=int, required=False)
     parser.add_argument('--micro_batch_size', action='store', default=4, type=int, required=False)
-    parser.add_argument('--lr', action='store', type=float, required=True)
+    parser.add_argument('--lr', action='store', default=1e-4, type=float, required=False)
     parser.add_argument('--epochs', action='store', type=int, required=True)
     parser.add_argument('--gpu_id', action='store', type=int, default=0, required=False)
-    parser.add_argument('--data_path', action='store', type=str, required=True)
-    parser.add_argument('--anomaly_source_path', action='store', type=str, required=True)
-    parser.add_argument('--checkpoint_path', action='store', type=str, required=True)
-    parser.add_argument('--log_path', action='store', type=str, required=True)
+    parser.add_argument('--data_path', action='store', default='./datasets/mvtec/', type=str, required=False)
+    parser.add_argument('--anomaly_source_path', action='store', default='./datasets/dtd/images/', type=str, required=False)
+    parser.add_argument('--checkpoint_path', action='store', default='./checkpoints', type=str, required=False)
+    parser.add_argument('--log_path', action='store', default='./logs', type=str, required=False)
     parser.add_argument('--visualize', action='store_true')
     parser.add_argument('--extra_tags', action='append', default=None, help='Additional W&B tags. Use multiple --extra_tags or a single comma-separated string.', required=False)
-    parser.add_argument('--amp', action='store_true', default=False, help='Enable mixed precision (amp) for faster training and lower VRAM use.', required=False)
-    parser.add_argument('--compile', action='store_true', default=False, help='Use torch.compile (PyTorch 2.x) to JIT-compile the model.', required=False)
+    parser.add_argument('--amp', action='store_true', default=True, help='Enable mixed precision (amp) for faster training and lower VRAM use.', required=False)
+    parser.add_argument('--compile', action='store_true', default=True, help='Use torch.compile (PyTorch 2.x) to JIT-compile the model.', required=False)
 
-    args = parser.parse_args()
+    return parser
 
-    if args.extra_tags is None:
-        args.extra_tags = ["no_tag"]
-
-
+def get_obj_id_list(obj_id):
     obj_batch = [['capsule'],
                  ['bottle'],
                  ['carpet'],
@@ -299,7 +310,7 @@ if __name__=="__main__":
                  ['wood']
                  ]
 
-    if int(args.obj_id) == -1:
+    if int(obj_id) == -1:
         obj_list = ['capsule',
                      'bottle',
                      'carpet',
@@ -318,20 +329,18 @@ if __name__=="__main__":
                      ]
         picked_classes = obj_list
     else:
-        picked_classes = obj_batch[int(args.obj_id)]
+        picked_classes = obj_batch[int(obj_id)]
+    return picked_classes
 
-    # Merge default and user-supplied tags
-    default_tags = ["train_draem"]
-    extra_tags = []
-    if getattr(args, "extra_tags", None):
-        # Accept comma-separated string or repeated flags
-        if isinstance(args.extra_tags, list):
-            for item in args.extra_tags:
-                extra_tags.extend([t.strip() for t in item.split(",") if t.strip()])
-        else:
-            extra_tags = [t.strip() for t in str(args.extra_tags).split(",") if t.strip()]
-    tags = list(dict.fromkeys(extra_tags + default_tags))  # dedupe preserving order
+
+if __name__=="__main__":
+    parser = get_parser()
+    args = parser.parse_args()
+
+    if args.extra_tags is None:
+        args.extra_tags = ["no_tag"]
+
 
     with torch.cuda.device(args.gpu_id):
-        train_on_device(picked_classes, args, tags)
+        train_on_device(args)
 

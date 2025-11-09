@@ -1,8 +1,9 @@
 #!/bin/bash -xl
 #
-#SBATCH --gres=gpu::1
+#SBATCH --gres=gpu:a100:1
+#SBATCH -p a100
 #SBATCH --time=12:00:00
-#SBATCH --output=./slurm/train_victim/logs/%x.%j.log
+#SBATCH --output=./slurm/default/logs/%x.%j.log
 
 
 unset SLURM_EXPORT_ENV

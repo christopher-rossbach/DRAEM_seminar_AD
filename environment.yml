@@ -1,4 +1,4 @@
-name: draem2
+name: draem
 channels:
   - pytorch
   - nvidia
