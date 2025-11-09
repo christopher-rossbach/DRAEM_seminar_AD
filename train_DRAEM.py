@@ -85,7 +85,15 @@ def train_on_device(args):
         optimizer = torch.optim.Adam([{"params": model.parameters(), "lr": args.lr},
                                       {"params": model_seg.parameters(), "lr": args.lr}])
 
-        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=0)
+        if args.lr_scheduler == "cosine_annealing":
+            scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=0)
+        elif args.lr_scheduler.startswith("multi_step"):
+            params = [float(param) for param in args.lr_scheduler.split("_")[2:]]
+            gamma = params[0]
+            milestones = [int(args.epochs * param) for param in params[1:]]
+            scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=milestones, gamma=gamma)
+        else:
+            raise ValueError(f"Unknown lr_scheduler: {args.lr_scheduler}")
 
         loss_l2 = torch.nn.modules.loss.MSELoss()
         loss_ssim = SSIM()
@@ -289,6 +297,7 @@ def get_parser():
     parser.add_argument('--extra_tags', action='append', default=None, help='Additional W&B tags. Use multiple --extra_tags or a single comma-separated string.', required=False)
     parser.add_argument('--amp', action='store_true', default=True, help='Enable mixed precision (amp) for faster training and lower VRAM use.', required=False)
     parser.add_argument('--compile', action='store_true', default=True, help='Use torch.compile (PyTorch 2.x) to JIT-compile the model.', required=False)
+    parser.add_argument('--lr_scheduler', action='store', default="cosine_annealing", type=str, required=False)
 
     return parser
 

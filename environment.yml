@@ -29,6 +29,8 @@ dependencies:
   - pytorch::pytorch-cuda=12.4
   - tensorboard
   - pip:
+    # Pin numpy here too so pip step won't upgrade it to 2.x during env solve
+    - numpy==1.26.4
     - imgaug
     # Pin OpenCV headless to version compatible with NumPy 1.x (avoid 4.12.0 requiring NumPy>=2)
     - opencv-python-headless==4.8.1.78

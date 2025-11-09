@@ -9,6 +9,7 @@ EPOCHS=(700)
 OBJ_IDS=("0,1,2" "3,4,5" "6,7,8")
 EXTRA_TAGS="baseline"
 EXTRA_FLAGS=("")
+LR_SCHEDULERS=("multi_step_0.1_0.572_0.858")
 #OBJ_IDS=(0)
 
 # Parse arguments
@@ -22,7 +23,7 @@ done
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Calculate total number of jobs
-NUM_JOBS=$(( ${#BATCH_SIZES[@]} * ${#LRS[@]} * ${#EPOCHS[@]} * ${#OBJ_IDS[@]} * ${#EXTRA_FLAGS[@]} ))
+NUM_JOBS=$(( ${#BATCH_SIZES[@]} * ${#LRS[@]} * ${#EPOCHS[@]} * ${#OBJ_IDS[@]} * ${#EXTRA_FLAGS[@]} * ${#LR_SCHEDULERS[@]} ))
 
 echo "Number of jobs to start: $NUM_JOBS"
 if [ "$NUM_JOBS" -gt 20 ]; then
@@ -44,10 +45,12 @@ for BATCH_SIZE in "${BATCH_SIZES[@]}"; do
 		for EPOCH in "${EPOCHS[@]}"; do
 			for OBJ_ID in "${OBJ_IDS[@]}"; do
 				for EXTRA_FLAG in "${EXTRA_FLAGS[@]}"; do
-					echo "sbatch job.slurm $OBJ_ID --bs $BATCH_SIZE --epochs $EPOCH --lr $LR $EXTRA_FLAG --extra_tags \"$EXTRA_TAGS\""
-					if [ "$DRY_RUN" -eq 0 ]; then
-						sbatch.tinygpu $DIR/job.slurm $OBJ_ID --bs $BATCH_SIZE --epochs $EPOCH --lr $LR $EXTRA_FLAG --extra_tags "$EXTRA_TAGS"
-					fi
+					for LR_SCHEDULER in "${LR_SCHEDULERS[@]}"; do
+						echo "sbatch job.slurm $OBJ_ID --bs $BATCH_SIZE --epochs $EPOCH --lr $LR --lr_scheduler $LR_SCHEDULER $EXTRA_FLAG --extra_tags \"$EXTRA_TAGS\""
+						if [ "$DRY_RUN" -eq 0 ]; then
+							sbatch.tinygpu $DIR/job.slurm $OBJ_ID --bs $BATCH_SIZE --epochs $EPOCH --lr $LR --lr_scheduler $LR_SCHEDULER $EXTRA_FLAG --extra_tags "$EXTRA_TAGS"
+						fi
+					done
 				done
 			done
 		done
