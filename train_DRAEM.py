@@ -100,7 +100,7 @@ def train_on_device(args):
         loss_focal = FocalLoss()
         img_dim = 256
 
-        train_dataset = MVTecDRAEMTrainDataset(args.data_path + obj_name + "/train/good/", args.anomaly_source_path, resize_shape=[img_dim, img_dim])
+        train_dataset = MVTecDRAEMTrainDataset(args.data_path + obj_name + "/train/good/", args.anomaly_source_path, resize_shape=[img_dim, img_dim], blend_method=args.blend_method)
 
         # Gradient accumulation: use micro-batch size 4, accumulate until args.bs samples then optimizer.step
         micro_batch_size = args.micro_batch_size if args.bs >= 4 else args.bs
@@ -292,8 +292,9 @@ def get_parser():
     parser.add_argument('--visualize', action='store_true')
     parser.add_argument('--extra_tags', action='append', default=None, help='Additional W&B tags. Use multiple --extra_tags or a single comma-separated string.', required=False)
     parser.add_argument('--amp', action='store_true', default=False, help='Enable mixed precision (amp) for faster training and lower VRAM use.', required=False)
-    parser.add_argument('--compile', action='store_true', default=True, help='Use torch.compile (PyTorch 2.x) to JIT-compile the model.', required=False)
+    parser.add_argument('--compile', action='store_true', default=False, help='Use torch.compile (PyTorch 2.x) to JIT-compile the model.', required=False)
     parser.add_argument('--lr_scheduler', action='store', default="cosine_annealing", type=str, required=False)
+    parser.add_argument('--blend_method', action='store', default='beta_uniform', type=str, choices=['beta_uniform', 'beta_perlin'], help='Blending method for anomaly synthesis: beta_uniform (constant blending) or beta_perlin (spatially-varying blending).', required=False)
 
     return parser
 
