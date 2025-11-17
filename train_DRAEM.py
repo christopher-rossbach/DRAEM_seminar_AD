@@ -117,7 +117,7 @@ def train_on_device(args):
             "train_dataset_size": len(train_dataset),
             "test_dataset_size": len(test_dataset),
             "obj_name": obj_name,
-            "lr_scheduler": "cosine_annealing",
+            "lr_scheduler": args.lr_scheduler,
             "slurm_job_id": os.environ.get("SLURM_JOB_ID", "N/A"),
             "hostname": os.environ.get("HOSTNAME", "N/A"),
             "gpu_type": torch.cuda.get_device_name(args.gpu_id) if torch.cuda.is_available() else "N/A",
@@ -193,23 +193,17 @@ def train_on_device(args):
                 if processed_in_group >= args.bs or last_batch:
                     backward_start = time.time()
                     if args.amp:
-                        # Gradient clipping before optimizer step for stability
                         scaler.unscale_(optimizer)
-                        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-                        torch.nn.utils.clip_grad_norm_(model_seg.parameters(), max_norm=1.0)
                         scaler.step(optimizer)
                         scaler.update()
                     else:
-                        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-                        torch.nn.utils.clip_grad_norm_(model_seg.parameters(), max_norm=1.0)
                         optimizer.step()
                     optimizer.zero_grad(set_to_none=True)
                     backward_times.append(time.time() - backward_start)
                     processed_in_group = 0
             start_evaluation_time = time.time()
-            eval_results = None
-            with torch.no_grad():
-                eval_results = evaluate_model_performance(img_dim, model, model_seg, len(test_dataset), test_dataloader)
+
+            eval_results = evaluate_model_performance(img_dim, model, model_seg, len(test_dataset), test_dataloader)
 
 
             auroc, ap, auroc_pixel, ap_pixel, display_images, display_gt_images, display_out_masks, display_in_masks = eval_results
@@ -239,6 +233,8 @@ def train_on_device(args):
                 "time/backwards_passes": sum(backward_times) / train_size,
                 "time/per_sample": epoch_time / train_size,
                 "time/evaluation": eval_time / eval_size,
+                "progress/epoch": epoch,
+                "progress/relative": (1 + epoch) / args.epochs,
             }
             run.log(log_data, step=epoch)
             print(json.dumps(log_data, indent=4))
@@ -295,7 +291,7 @@ def get_parser():
     parser.add_argument('--log_path', action='store', default='./logs', type=str, required=False)
     parser.add_argument('--visualize', action='store_true')
     parser.add_argument('--extra_tags', action='append', default=None, help='Additional W&B tags. Use multiple --extra_tags or a single comma-separated string.', required=False)
-    parser.add_argument('--amp', action='store_true', default=True, help='Enable mixed precision (amp) for faster training and lower VRAM use.', required=False)
+    parser.add_argument('--amp', action='store_true', default=False, help='Enable mixed precision (amp) for faster training and lower VRAM use.', required=False)
     parser.add_argument('--compile', action='store_true', default=True, help='Use torch.compile (PyTorch 2.x) to JIT-compile the model.', required=False)
     parser.add_argument('--lr_scheduler', action='store', default="cosine_annealing", type=str, required=False)
 

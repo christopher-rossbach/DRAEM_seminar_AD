@@ -1,7 +1,6 @@
 #!/bin/bash -xl
 #
-#SBATCH --gres=gpu:a100:1
-#SBATCH -p a100
+#SBATCH --gres=gpu::1
 #SBATCH --time=12:00:00
 #SBATCH --output=./slurm/default/logs/%x.%j.log
 
@@ -27,7 +26,7 @@ shift  # Remove first argument so remaining args can be passed through
 IFS=',' read -ra OBJ_ARRAY <<< "$OBJ_IDS"
 for obj_id in "${OBJ_ARRAY[@]}"; do
     echo "Starting training for object ID: $obj_id"
-    python3 "$SLURM_SUBMIT_DIR/train_DRAEM.py" --obj_id "$obj_id" "$@" --data_path "$SLURM_SUBMIT_DIR/datasets/mvtec/" --anomaly_source_path "$SLURM_SUBMIT_DIR/datasets/dtd/images/" --checkpoint_path "$SLURM_SUBMIT_DIR/checkpoints/" --log_path "$SLURM_SUBMIT_DIR/logs/" --amp --compile &
+    python3 "$SLURM_SUBMIT_DIR/train_DRAEM.py" --obj_id "$obj_id" "$@" --data_path "$SLURM_SUBMIT_DIR/datasets/mvtec/" --anomaly_source_path "$SLURM_SUBMIT_DIR/datasets/dtd/images/" --checkpoint_path "$SLURM_SUBMIT_DIR/checkpoints/" --log_path "$SLURM_SUBMIT_DIR/logs/" --compile &
 done
 
 # Wait for all background processes to complete
