@@ -1,6 +1,4 @@
 #!/bin/bash
-# Auto-generated grid search for train_victim.py parameters
-# --data_path ./datasets/mvtec/ --anomaly_source_path ./datasets/dtd/images/ --checkpoint_path ./checkpoints/ --log_path ./logs/
 
 # Grid search parameters
 BATCH_SIZES=(8)

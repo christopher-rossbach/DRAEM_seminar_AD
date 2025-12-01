@@ -72,7 +72,7 @@ def train_on_device(args):
 
     for obj_name in obj_names:
 
-        run_name = 'base_' + '_'.join(obj_names) + '_lr' + str(args.lr) + '_bs' + str(args.bs) + '_ep' + str(args.epochs)
+        run_name = str(args.blend_method) + '_' + '_'.join(obj_names)
 
         model = ReconstructiveSubNetwork(in_channels=3, out_channels=3)
         model.cuda()
@@ -233,7 +233,7 @@ def train_on_device(args):
                 "time/per_sample": epoch_time / train_size,
                 "time/evaluation": eval_time / eval_size,
                 "progress/epoch": epoch,
-                "progress/relative": (1 + epoch) / args.epochs,
+                "progress/relative": round((1 + epoch) / args.epochs, 2),
             }
             run.log(log_data, step=epoch)
             print(json.dumps(log_data, indent=4))
@@ -296,7 +296,7 @@ def get_parser():
     parser.add_argument('--amp', action='store_true', default=False, help='Enable mixed precision (amp) for faster training and lower VRAM use.', required=False)
     parser.add_argument('--compile', action='store_true', default=False, help='Use torch.compile (PyTorch 2.x) to JIT-compile the model.', required=False)
     parser.add_argument('--lr_scheduler', action='store', default="cosine_annealing", type=str, required=False)
-    parser.add_argument('--blend_method', action='store', default='beta_uniform', type=str, choices=['beta_uniform', 'beta_perlin', 'poisson'], required=False)
+    parser.add_argument('--blend_method', action='store', default='uniform_beta', type=str, choices=['uniform_beta', 'perlin_beta', 'texture_beta', 'blurred_beta', 'poisson'], required=False)
     parser.add_argument('--save_models', action='store_true', default=False, help='Whether to save model checkpoints during training.', required=False)
 
     return parser

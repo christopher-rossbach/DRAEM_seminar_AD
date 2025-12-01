@@ -76,7 +76,6 @@ class MVTecDRAEMTestDataset(Dataset):
         return sample
 
 
-
 class MVTecDRAEMTrainDataset(Dataset):
 
     def __init__(self, root_dir, anomaly_source_path, resize_shape=None, image_limit=None, texture_limit=None, blend_method='beta_uniform', use_image_placeholder=False, use_anomaly_placeholder=False):
@@ -161,44 +160,43 @@ class MVTecDRAEMTrainDataset(Dataset):
         return augmented_image
 
     def _blend_uniform_beta(self, image, anomaly_texture, anomaly_mask, beta_range=(0.2, 1.0)):
-        """
-        Original blending method: uses a single beta value for entire mask.
-
-        Args:
-            image: Original image (H, W, C)
-            anomaly_texture: Preprocessed anomaly texture (H, W, C)
-            anomaly_mask: Binary mask (H, W, 1)
-
-        Returns:
-            Blended image (H, W, C), Beta map (H, W, 1)
-        """
         beta = torch.rand(1).numpy()[0] * (beta_range[1] - beta_range[0]) + beta_range[0]
 
-        beta_map = np.ones_like(anomaly_mask) * beta
+        beta_map = anomaly_mask * beta
 
         augmented_image = self._blend_with_beta_map(image, anomaly_texture, beta_map)
 
         return augmented_image, beta_map
 
+    def _blend_blurred_beta(self, image, anomaly_texture, anomaly_mask, beta_range=(0.2, 1.0)):
+        beta = torch.rand(1).numpy()[0] * (beta_range[1] - beta_range[0]) + beta_range[0]
+
+        beta_map = anomaly_mask * beta
+
+        radius = np.random.randint(0, anomaly_mask.shape[0]//2 + 1)
+        if radius > 0:
+            ksize = (radius // 2) * 2 + 1
+            beta_map = cv2.GaussianBlur(beta_map, (ksize, ksize), sigmaX=0, sigmaY=0)[:, :, np.newaxis]
+        beta_map = beta_map * anomaly_mask
+
+        augmented_image = self._blend_with_beta_map(image, anomaly_texture, beta_map)
+
+        return augmented_image, beta_map
+
+    def _blend_texture_beta(self, image, anomaly_texture, anomaly_mask, beta_range=(0.2, 1.0)):
+        anomaly_source_idx = torch.randint(0, len(self.anomaly_source_images), (1,)).item()
+        aug = self.randAugmenter()
+        texture_source_img = self.anomaly_source_images[anomaly_source_idx].copy() 
+        beta_texture = aug(image=texture_source_img).astype(np.float32) / 255.0
+        beta_map = cv2.cvtColor(beta_texture, cv2.COLOR_RGB2GRAY)
+        beta_map = (beta_map - beta_map.min()) / (beta_map.max() - beta_map.min() + 1e-8)
+        beta_map = beta_map * (beta_range[1] - beta_range[0]) + beta_range[0]
+        beta_map = beta_map * anomaly_mask[:, :, 0]
+        beta_map = beta_map[:, :, np.newaxis]
+        augmented_image = self._blend_with_beta_map(image, anomaly_texture, beta_map)
+        return augmented_image, beta_map
+
     def _blend_perlin_beta(self, image, anomaly_texture, anomaly_mask, beta_range=(0.2, 1.0)):
-        """
-        Perlin noise-based blending: uses spatially-varying beta values.
-
-        Generates a Perlin noise map and scales it so that:
-        - Minimum value = (1 - beta_sample)
-        - Maximum value = 1.0
-
-        This creates natural-looking variation in how much the original image shows through.
-
-        Args:
-            image: Original image (H, W, C)
-            anomaly_texture: Preprocessed anomaly texture (H, W, C)
-            perlin_thr: Binary mask (H, W, 1)
-            beta_range: Tuple specifying min and max beta values (beta = 1 means full anomaly texture)
-        Returns:
-            Blended image (H, W, C), Beta map (H, W, 1)
-        """
-
         # Generate Perlin noise for spatially-varying beta
         perlin_scale = 6
         min_perlin_scale = 0
@@ -220,18 +218,6 @@ class MVTecDRAEMTrainDataset(Dataset):
         return augmented_image, beta_map
 
     def _blend_poisson(self, image, anomaly_texture, anomaly_mask):
-        """
-        Poisson blending method (not used in current implementation).
-
-        Args:
-            image: Original image (H, W, C)
-            anomaly_texture: Preprocessed anomaly texture (H, W, C)
-            perlin_thr: Binary mask (H, W, 1)
-
-        Returns:
-            Blended image (H, W, C)
-        """
-
         blended_channels = []
         for c in range(3):
             blended_channel = poisson_blend(
@@ -267,10 +253,14 @@ class MVTecDRAEMTrainDataset(Dataset):
         anomaly_texture = anomaly_img_augmented.astype(np.float32) / 255.0
 
         # Apply selected blending method
-        if self.blend_method == 'beta_uniform':
+        if self.blend_method == 'uniform_beta':
             augmented_image, beta_map = self._blend_uniform_beta(image, anomaly_texture, perlin_thr)
-        elif self.blend_method == 'beta_perlin':
+        elif self.blend_method == 'perlin_beta':
             augmented_image, beta_map = self._blend_perlin_beta(image, anomaly_texture, perlin_thr)
+        elif self.blend_method == 'texture_beta':
+            augmented_image, beta_map = self._blend_texture_beta(image, anomaly_texture, perlin_thr)
+        elif self.blend_method == 'blurred_beta':
+            augmented_image, beta_map = self._blend_blurred_beta(image, anomaly_texture, perlin_thr)
         elif self.blend_method == 'poisson':
             augmented_image, beta_map = self._blend_poisson(image, anomaly_texture, perlin_thr)
         else:
