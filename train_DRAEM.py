@@ -117,7 +117,6 @@ def train_on_device(args):
             "train_dataset_size": len(train_dataset),
             "test_dataset_size": len(test_dataset),
             "obj_name": obj_name,
-            "lr_scheduler": args.lr_scheduler,
             "slurm_job_id": os.environ.get("SLURM_JOB_ID", "N/A"),
             "hostname": os.environ.get("HOSTNAME", "N/A"),
             "gpu_type": torch.cuda.get_device_name(args.gpu_id) if torch.cuda.is_available() else "N/A",
@@ -246,11 +245,13 @@ def train_on_device(args):
                 img_grid_out = torchvision.utils.make_grid(gray_rec.detach().float().cpu(), normalize=True, scale_each=True)
                 mask_grid_target = torchvision.utils.make_grid(anomaly_mask.detach().float().cpu(), normalize=False)
                 mask_grid_out = torchvision.utils.make_grid(t_mask.detach().float().cpu(), normalize=False)
+                beta_map = torchvision.utils.make_grid(sample_batched["beta_map"].detach().float().cpu(), normalize=False)
 
                 run.log({
                     "images/batch_augmented": wandb.Image(img_grid_aug),
                     "images/batch_recon_target": wandb.Image(img_grid_target),
                     "images/batch_recon_out": wandb.Image(img_grid_out),
+                    "images/beta_map": wandb.Image(beta_map),
                     "images/mask_target": wandb.Image(mask_grid_target),
                     "images/mask_out": wandb.Image(mask_grid_out),
                 }, step=epoch)
@@ -267,8 +268,9 @@ def train_on_device(args):
                     "images/eval/mask_target_grid": wandb.Image(eval_grid_mask_target),
                 }, step=epoch)
 
-                torch.save(model.state_dict(), os.path.join(args.checkpoint_path, run_name+".pckl"))
-                torch.save(model_seg.state_dict(), os.path.join(args.checkpoint_path, run_name+"_seg.pckl"))
+                if args.save_models:
+                    torch.save(model.state_dict(), os.path.join(args.checkpoint_path, run_name+".pckl"))
+                    torch.save(model_seg.state_dict(), os.path.join(args.checkpoint_path, run_name+"_seg.pckl"))
 
 
             scheduler.step()
@@ -294,7 +296,8 @@ def get_parser():
     parser.add_argument('--amp', action='store_true', default=False, help='Enable mixed precision (amp) for faster training and lower VRAM use.', required=False)
     parser.add_argument('--compile', action='store_true', default=False, help='Use torch.compile (PyTorch 2.x) to JIT-compile the model.', required=False)
     parser.add_argument('--lr_scheduler', action='store', default="cosine_annealing", type=str, required=False)
-    parser.add_argument('--blend_method', action='store', default='beta_uniform', type=str, choices=['beta_uniform', 'beta_perlin'], help='Blending method for anomaly synthesis: beta_uniform (constant blending) or beta_perlin (spatially-varying blending).', required=False)
+    parser.add_argument('--blend_method', action='store', default='beta_uniform', type=str, choices=['beta_uniform', 'beta_perlin', 'poisson'], required=False)
+    parser.add_argument('--save_models', action='store_true', default=False, help='Whether to save model checkpoints during training.', required=False)
 
     return parser
 
