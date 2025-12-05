@@ -5,10 +5,10 @@ BATCH_SIZES=(8)
 LRS=(0.0001)
 EPOCHS=(700)
 OBJ_IDS=("0,0" "1,1" "2,2" "3,3" "4,4" "5,5" "6,6" "7,7" "8,8" "9,9" "10,10" "11,11" "12,12" "13,13" "14,14")
-EXTRA_TAGS="blending_methods"
+EXTRA_TAGS="blending_methods,cos_lr"
 EXTRA_FLAGS=("--amp")
-LR_SCHEDULERS=("multi_step_0.1_0.572_0.858")
-BLEND_METHODS=("blurred_beta" "perlin_beta" "texture_beta" "uniform_beta" "poisson")
+LR_SCHEDULERS=("cosine_annealing")
+BLEND_METHODS=("blurred_beta" "perlin_beta" "texture_beta" "uniform_beta")
 
 # Parse arguments
 DRY_RUN=0
