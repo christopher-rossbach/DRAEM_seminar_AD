@@ -296,7 +296,7 @@ def get_parser():
     parser.add_argument('--amp', action='store_true', default=False, help='Enable mixed precision (amp) for faster training and lower VRAM use.', required=False)
     parser.add_argument('--compile', action='store_true', default=False, help='Use torch.compile (PyTorch 2.x) to JIT-compile the model.', required=False)
     parser.add_argument('--lr_scheduler', action='store', default="cosine_annealing", type=str, required=False)
-    parser.add_argument('--blend_method', action='store', default='uniform_beta', type=str, choices=['uniform_beta', 'perlin_beta', 'texture_beta', 'blurred_beta', 'poisson'], required=False)
+    parser.add_argument('--blend_method', action='store', default='uniform_beta', type=str, required=False)
     parser.add_argument('--save_models', action='store_true', default=False, help='Whether to save model checkpoints during training.', required=False)
 
     return parser

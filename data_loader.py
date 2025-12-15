@@ -1,4 +1,5 @@
 import os
+import random
 import numpy as np
 from torch.utils.data import Dataset
 import torch
@@ -81,7 +82,7 @@ class MVTecDRAEMTrainDataset(Dataset):
     def __init__(self, root_dir, anomaly_source_path, resize_shape=None, image_limit=None, texture_limit=None, blend_method='beta_uniform', use_image_placeholder=False, use_anomaly_placeholder=False):
         self.root_dir = root_dir
         self.resize_shape=resize_shape
-        self.blend_method=blend_method
+        self.blend_methods=blend_method.split(',')
         self.use_image_placeholder=use_image_placeholder
         self.use_anomaly_placeholder=use_anomaly_placeholder
 
@@ -253,18 +254,19 @@ class MVTecDRAEMTrainDataset(Dataset):
         anomaly_texture = anomaly_img_augmented.astype(np.float32) / 255.0
 
         # Apply selected blending method
-        if self.blend_method == 'uniform_beta':
+        chosen_blend_method = random.choice(self.blend_methods)
+        if chosen_blend_method == 'uniform_beta':
             augmented_image, beta_map = self._blend_uniform_beta(image, anomaly_texture, perlin_thr)
-        elif self.blend_method == 'perlin_beta':
+        elif chosen_blend_method == 'perlin_beta':
             augmented_image, beta_map = self._blend_perlin_beta(image, anomaly_texture, perlin_thr)
-        elif self.blend_method == 'texture_beta':
+        elif chosen_blend_method == 'texture_beta':
             augmented_image, beta_map = self._blend_texture_beta(image, anomaly_texture, perlin_thr)
-        elif self.blend_method == 'blurred_beta':
+        elif chosen_blend_method == 'blurred_beta':
             augmented_image, beta_map = self._blend_blurred_beta(image, anomaly_texture, perlin_thr)
-        elif self.blend_method == 'poisson':
+        elif chosen_blend_method == 'poisson':
             augmented_image, beta_map = self._blend_poisson(image, anomaly_texture, perlin_thr)
         else:
-            raise ValueError(f"Unknown blend_method: {self.blend_method}")
+            raise ValueError(f"Unknown blend_method: {chosen_blend_method}")
 
         # Randomly return images without anomalies (50% chance)
         no_anomaly = torch.rand(1).numpy()[0]
