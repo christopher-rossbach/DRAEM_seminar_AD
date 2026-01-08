@@ -1,0 +1,113 @@
+% Introduction
+\begin{frame}{Introduction}{Surface Anomaly Detection}
+    \begin{itemize}[<+->]
+        \item Detection and localization of anomalies in the image space, e.g. RGB, thermal, X-ray, ultrasound, \ldots
+        \item Detecting skin lesions, defects in circuit boards, scratches on automotive parts, cracks in bridges, \ldots
+        \item OOD-Samples are often rare and diverse
+        \item Collecting data for all possible anomalies is often infeasible
+        \item This gets worse when pixel-accurate localization is required
+        \item Therefore, methods that only rely on normal data are preferred
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Problem Statement}{Current Situation and Related Work}
+    \begin{itemize}
+        \item \textbf{Paper:} ``DRÆM -- A Discriminatively Trained Reconstruction Anomaly Embedding for Surface Anomaly Detection''\footcite{zavrtanikDRAEMDiscriminativelyTrained2021}
+        \begin{columns}
+            \begin{column}{0.45\textwidth}
+                \begin{enumerate}
+                    \item<4-> \textbf{Reconstructive Methods} (Autoencoders, GANs) detect anomalies by measuring reconstruction error
+                    \begin{itemize}
+                        \item<5-> Hand-crafting difference functions is hard 
+                        \item<5-> Not substantially different anomalies often well reconstructed
+                    \end{itemize}
+                    \item<6-> \textbf{Discriminative Methods} on (deep) features (e.g. CNNs) distribution deviation
+                    \begin{itemize}
+                        \item<7-> These often suffer from unsharp segmentation maps
+                        \item<7-> Overfit to synthetic anomalies used during training and do not generalize well
+                    \end{itemize}
+                \end{enumerate}
+            \end{column}
+                \begin{column}{0.55\textwidth}
+                    \uncover<4->{
+                        \begin{figure}
+                            \centering
+                            \includegraphics[width=0.8\textwidth]{pitch/auto-encoder.png}
+                        \end{figure}
+                    }
+                    \uncover<7->{
+                        \begin{figure}
+                            \centering
+                            \includegraphics[width=0.8\textwidth]{pitch/unsharp-segmentation.png}
+                        \end{figure}
+                    }
+                \end{column}
+        \end{columns}
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Framework Overview}{How it Works}
+    \begin{center}
+        \begin{tikzpicture}[scale=1.428]
+            \node (img) at (0,0) {\includegraphics[width=\textwidth]{pitch/pipeline.png}};
+            \uncover<-1>{
+                \fill[white] (-11.5,-1.2) rectangle (8.5,4.8);
+                \fill[white] (-11.5,-4.2) rectangle (-7.1,4.8);
+            }
+            \only<-2>{
+                \fill[white] (0.0,-4.2) rectangle (11.5,4.8);
+                \fill[white] (-0.5,-0.2) rectangle (11.5,4.8);
+            }
+            \only<-3>{
+                \fill[white] (8.0,-4.2) rectangle (11.5,4.8);
+            }
+            \only<4>{}
+        \end{tikzpicture}
+    \end{center}
+\end{frame}
+
+\begin{frame}{Key Findings \& Application \& Conclusion}{The Value of DRÆM}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \begin{itemize}[<+->]
+                \item Outperforms unsupervised SOTA methods
+                \item Similar performance to supervised SOTA methods
+                \item High quality segmentation can help downstream tasks
+                \begin{itemize}
+                    \item Estimate the size of impacted area
+                    \item Distinguish between crack, corrosion or just paint
+                \end{itemize}
+                \item We don't need expensive hand-labeled data
+                \item We only need just-out-of-distribution patterns for anomaly generation
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \uncover<3->{
+                \begin{figure}
+                    \centering
+                    \includegraphics[width=0.9\textwidth]{pitch/sharp-segmentation.png}
+                \end{figure}
+            }
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Limitation \& Extension}{Where to go from Here}
+    \begin{itemize}[<+->]
+        \item The method lacks performance in cases where domain knowledge is necessary to perform well
+        \item For example here the whole lead of the transistor is cut off, but it only marks the position of the cut
+        \begin{figure}
+            \centering
+            \includegraphics[width=0.5\textwidth]{pitch/transistor.png}
+        \end{figure}
+        \item Another example could be when certain "normalities" are underrepresented in the training data
+        \begin{itemize}
+            \item DRÆM may detect stains on walls as anomalies, while only structural damage should be detected
+            \item In these cases finetuning the discriminative network may improve performance
+        \end{itemize}
+    \end{itemize}
+\end{frame}
+
+\begin{frame}[t,titleimage]{-}
+    Thank you for your attention
+\end{frame}

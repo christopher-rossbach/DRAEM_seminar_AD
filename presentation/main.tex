@@ -7,7 +7,7 @@
 % of the GNU Public License, version 2.
 %
 % ------------------------------------------------------------------------------
-\documentclass[final]{beamer}
+\documentclass[handout]{beamer}
 
 % ========================================================================================
 % Theme: inner, outer, font and colors
@@ -49,27 +49,14 @@
 % ========================================================================================
 % Setup for Titlepage
 % ----------------------------------------------------------------------------------------
-\title[fau-beamer]{The NEW fau-beamer Template}
-\subtitle{The \LaTeX{} template according to the 2021 FAU corporate guide}
-\author[T. Roith]{
-Tim Roith\inst{1}\and%
-Second Author\inst{2}\and%
-Third Author\inst{3}%
-}
+\title[DRÆM Presentation]{DRÆM - ICCV 2021}
+\subtitle{A Discriminatively Trained Reconstruction Embedding for Surface Anomaly Detection -- Vitjan Zavrtanik, Matej Kristan, Danijel Skočaj}
+\author[Christopher Roßbach]{
+Christopher Roßbach\inst{1}}
 %
 \institute[FAU]{%
-\inst{1} Friedrich-Alexander-Universität Erlangen-Nürnberg, Department Mathematik \and%
-\inst{2} Second Insitute \and%
-\inst{3} Third Insitute
+\inst{1} Friedrich-Alexander-Universität Erlangen-Nürnberg, Technische Fakultät
 }
-
-% Instead of \institute you can also use the \thanks command
-% ------------------------------------------------
-%\author[T. Roith]{
-%Tim Roith\thanks{Friedrich-Alexander Universität Erlangen-Nürnberg, Department Mathematik}\and%
-%Second Author\thanks{Second Insitute}\and%
-%Third Author\thanks{Third Insitute}%
-%}
 
 \date{\today}
 
@@ -147,27 +134,5 @@ Third Author\inst{3}%
 \titlepage%
 \end{frame}
 
-% Introduction
-\begin{frame}[t]{Introduction}{What is this?}
-This file demonstrates the fau-beamer style, which is a style for the \LaTeX{} \texttt{beamer} class, which allows to create presentation slides in \LaTeX. The design is based on the FAU corporate \href{https://www.intern.fau.de/kommunikation-marketing-und-corporate-identity/corporate-identity/}{ style guide 2021}.
-
-This code for this template was written by \href{https://timroith.github.io/}{Tim Roith}. If you have questions about the template or found a mistake you can send an email to tim\{dot\}roith\{at\}fau\{dot\}de or open a issue at the \href{https://github.com/FAU-AMMN/fau-beamer}{GitHub repository}.
-\end{frame}
-
-
-
-% Stylized outline
-\begin{frame}[title]{-}
-\tableofcontents
-\end{frame}
-
-\begin{frame}[t,title]{-}
-A frame using the \texttt{title option}
-\end{frame}
-
-\begin{frame}[t,titleimage]{-}
-A frame using the \texttt{titleimage option}
-\end{frame}
-
-% input exmple sections
+\input{main-content.tex}
 \end{document}
