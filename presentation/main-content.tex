@@ -2,8 +2,8 @@
 \begin{frame}{Introduction}{Surface Anomaly Detection}
     \begin{itemize}[<+->]
         \item Detection and localization of anomalies in the image space
-        \item E.g. RGB-drone images, medical scans, \ldots
-        \item OOD-Samples are often rare and diverse
+    \item E.g. RGB drone images, medical scans, \ldots
+    \item OOD samples are often rare and diverse
         \item Collecting data for all possible anomalies is often infeasible
         \item Data collection gets even harder when pixel-accurate localization is required
         \item Therefore, methods that only rely on normal data are preferred
@@ -17,13 +17,13 @@
                     \item<1-> Two groups of methods in this area:
                 \end{itemize}
                 \begin{enumerate}
-                    \item<2-> \textbf{Reconstructive Methods} (Autoencoders, GANs) detect anomalies by measuring reconstruction error
+                    \item<2-> \textbf{Reconstructive Methods} (Autoencoders, GANs) detect anomalies by measuring the reconstruction error
                     \begin{itemize}
-                        \item<3-> Minor anomalies often well reconstructed
+                        \item<3-> Minor anomalies are often well reconstructed
                     \end{itemize}
-                    \item<4-> \textbf{Discriminative Methods} on (deep) features (e.g. CNNs) distribution deviation
+                    \item<4-> \textbf{Discriminative Methods} detect distribution deviations on (deep) features (e.g. from CNNs)
                     \begin{itemize}
-                        \item<5-> Often suffer from unsharp segmentation
+                        \item<5-> Often suffer from blurry or coarse segmentation
                         \item<5-> Overfit to synthetic anomalies
                     \end{itemize}
                 \end{enumerate}
@@ -39,7 +39,7 @@
                         \begin{figure}
                             \centering
                             \includegraphics[width=0.8\textwidth]{pitch/unsharp-segmentation.png}
-                        \caption{Unsharp segmentation maps from discriminative methods.}
+                        \caption{Blurry segmentation maps from discriminative methods.}
                         \end{figure}
                     }
                 \end{column}
@@ -80,7 +80,7 @@
                 DRÆM   & \textbf{98.0\%}   & \underline{97.3\%}& \textbf{68.4\%} \\
                 \hline
             \end{tabular}
-            \caption{Results on MVTec Dataset}
+            \caption{Results on the MVTec dataset.}
         \end{table}
     \end{center}
 \end{frame}
@@ -118,7 +118,7 @@
                 \begin{figure}
                     \centering
                     \includegraphics[width=0.8\textwidth]{figures/draem-vs-bozic.png}
-                    \caption{DRÆM vs supervised SOTA (Bozic et al.) on DAGM.}
+                    \caption{DRÆM vs supervised SOTA (Bozic et al.) on the DAGM dataset.}
                 \end{figure}
             }
         \end{column}
@@ -132,10 +132,10 @@
             \begin{itemize}[<+->]
                 \item Outperforms unsupervised SOTA methods
                 \item Similar performance to supervised SOTA methods
-                \item High quality segmentation can help downstream tasks
+                \item High-quality segmentation can help downstream tasks
                 \begin{itemize}
-                    \item Estimate the size of impacted area
-                    \item Distinguish between crack, corrosion or just paint
+                    \item Estimate the size of the impacted area
+                    \item Distinguish between cracks, corrosion, or just paint
                 \end{itemize}
                 \item We don't need expensive hand-labeled data
                 \item We only need just-out-of-distribution patterns for anomaly generation
@@ -156,16 +156,16 @@
     \begin{columns}
         \begin{column}{0.5\textwidth}
             \begin{itemize}[<+->]
-                \item[$\times$] No code for experiments on DAGM dataset
-                \item[$\times$] Inconsistency in variable meaning between code and paper (e.g. $\beta$ as anomaly opacity vs image opacity)
-                \item[$\times$] Wrong weighting of incomplete batches
+                \item[$\times$] No code for experiments on the DAGM dataset
+                \item[$\times$] Inconsistencies in variable meaning between code and paper (e.g., $\beta$ as anomaly opacity vs. image opacity)
+                \item[$\times$] Incorrect weighting of incomplete batches
             \end{itemize}
         \end{column}
         \begin{column}{0.5\textwidth}
             \uncover<+->{}
             \begin{itemize}[<+->]
                 \item[\checkmark] Complete code for training and evaluation (for main findings)
-                \item[\checkmark] Well structured code in separate files for models, loss, data loading, training and evaluation
+                \item[\checkmark] Well-structured code in separate files for models, loss, data loading, training and evaluation
                 \item[\checkmark] Well readable code
                 \item[\checkmark] Download script for MVTec and DTD datasets
             \end{itemize}
@@ -175,21 +175,21 @@
         \begin{figure}
             \centering
             \includegraphics[width=0.9\textwidth]{figures/smooth-loss.png}
-            \caption{Loss smoothing by weighting last batch of each epoch}
+            \caption{Loss smoothing by weighting the last batch of each epoch.}
         \end{figure}
     }
 \end{frame}
 
 \begin{frame}{My Experiments}{Blending in}
     \begin{itemize}[<+->]
-        \item Ablation studies in the paper show, that adding transparency to anomalies has a huge impact
-        \item Original implementation samples one $\beta\in[0.1,1]$ for the whole image (uniform beta)
-        \item Added four different blending methods:
+        \item Ablation studies in the paper show that adding transparency to anomalies has a huge impact
+        \item The original implementation samples a single $\beta\in[0.1,1]$ for the whole image (uniform $\beta$)
+        \item I added four different blending methods:
         \uncover<+->{
             \begin{figure}
                 \centering
                 \includegraphics[width=0.75\textwidth]{figures/blend-methods}
-                \caption{Different blending methods (from left to right): uniform beta, perlin beta, texture beta, blurred beta, poisson blending}
+                \caption{Different blending methods (from left to right): uniform $\beta$, Perlin-$\beta$, texture-$\beta$, blurred $\beta$, Poisson Image Interpolation.}
             \end{figure}
         }
     \end{itemize}
@@ -200,12 +200,12 @@
         \begin{table}
             \centering
             \input{figures/blending_comparison_table.tex}
-            \caption{Results on MVTec Dataset}
+            \caption{Results on the MVTec dataset for different blending methods.}
         \end{table}
     \end{center}
 \end{frame}
 
 
 \begin{frame}[t,titleimage]{-}
-    Thank you for your attention
+    Thank you for your attention.
 \end{frame}
