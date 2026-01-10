@@ -1,49 +1,49 @@
 % Introduction
 \begin{frame}{Introduction}{Surface Anomaly Detection}
     \begin{itemize}[<+->]
-        \item Detection and localization of anomalies in the image space, e.g. RGB, thermal, X-ray, ultrasound, \ldots
-        \item Detecting skin lesions, defects in circuit boards, scratches on automotive parts, cracks in bridges, \ldots
+        \item Detection and localization of anomalies in the image space
+        \item E.g. RGB-drone images, medical scans, \ldots
         \item OOD-Samples are often rare and diverse
         \item Collecting data for all possible anomalies is often infeasible
-        \item This gets worse when pixel-accurate localization is required
+        \item Data collection gets even harder when pixel-accurate localization is required
         \item Therefore, methods that only rely on normal data are preferred
     \end{itemize}
 \end{frame}
 
 \begin{frame}{Problem Statement}{Current Situation and Related Work}
-    \begin{itemize}
-        \item \textbf{Paper:} ``DRÆM -- A Discriminatively Trained Reconstruction Anomaly Embedding for Surface Anomaly Detection''\footcite{zavrtanikDRAEMDiscriminativelyTrained2021}
         \begin{columns}
             \begin{column}{0.45\textwidth}
+                \begin{itemize}
+                    \item<1-> Two groups of methods in this area:
+                \end{itemize}
                 \begin{enumerate}
-                    \item<4-> \textbf{Reconstructive Methods} (Autoencoders, GANs) detect anomalies by measuring reconstruction error
+                    \item<2-> \textbf{Reconstructive Methods} (Autoencoders, GANs) detect anomalies by measuring reconstruction error
                     \begin{itemize}
-                        \item<5-> Hand-crafting difference functions is hard 
-                        \item<5-> Not substantially different anomalies often well reconstructed
+                        \item<3-> Minor anomalies often well reconstructed
                     \end{itemize}
-                    \item<6-> \textbf{Discriminative Methods} on (deep) features (e.g. CNNs) distribution deviation
+                    \item<4-> \textbf{Discriminative Methods} on (deep) features (e.g. CNNs) distribution deviation
                     \begin{itemize}
-                        \item<7-> These often suffer from unsharp segmentation maps
-                        \item<7-> Overfit to synthetic anomalies used during training and do not generalize well
+                        \item<5-> Often suffer from unsharp segmentation
+                        \item<5-> Overfit to synthetic anomalies
                     \end{itemize}
                 \end{enumerate}
             \end{column}
                 \begin{column}{0.55\textwidth}
-                    \uncover<4->{
+                    \uncover<2->{
                         \begin{figure}
                             \centering
                             \includegraphics[width=0.8\textwidth]{pitch/auto-encoder.png}
                         \end{figure}
                     }
-                    \uncover<7->{
+                    \uncover<5->{
                         \begin{figure}
                             \centering
                             \includegraphics[width=0.8\textwidth]{pitch/unsharp-segmentation.png}
+                        \caption{Unsharp segmentation maps from discriminative methods.}
                         \end{figure}
                     }
                 \end{column}
         \end{columns}
-    \end{itemize}
 \end{frame}
 
 \begin{frame}{Framework Overview}{How it Works}
@@ -65,6 +65,66 @@
         \end{tikzpicture}
     \end{center}
 \end{frame}
+
+\begin{frame}{Performance Comparison}{DRÆM vs State-of-the-Art}
+    \begin{center}
+        \begin{table}
+            \centering
+            \begin{tabular}{lccc}
+                \hline
+                \textbf{Method} & \textbf{Image AUROC} & \textbf{Pixel AUROC} & \textbf{Pixel AP} \\
+                \hline
+                US      & 87.7\%            & 93.9\%            & 45.5\% \\
+                RIAD    & 91.7\%            & 94.2\%            & 48.2\% \\
+                PaDim   & \underline{95.5\%}& \textbf{97.4\%}   & \underline{55.5\%} \\
+                DRÆM   & \textbf{98.0\%}   & \underline{97.3\%}& \textbf{68.4\%} \\
+                \hline
+            \end{tabular}
+            \caption{Results on MVTec Dataset}
+        \end{table}
+    \end{center}
+\end{frame}
+
+
+\begin{frame}{Performance on DAGM Dataset}{Unsupervised vs. Supervised Methods}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \begin{center}
+                \begin{table}
+                    \centering
+                    \begin{tabular}{lcccc}
+                        \hline
+                            \textbf{Method} & \textbf{AUROC} & \textbf{TPR} & \textbf{TNR} & \textbf{CA} \\
+                        \hline
+                        \multicolumn{5}{l}{\textbf{Unsupervised}} \\
+                        US      & 72.5 & 72.6 & 65.3 & 66.2 \\
+                        RIAD    & 78.6 & 79.2 & 69.1 & 70.4 \\
+                        PaDim   & 95.0 & 83.3 & 97.5 & 95.7 \\
+                        DRÆM    & \textbf{99.0} & \textbf{96.5} & \textbf{99.4} & \textbf{98.5} \\
+                        \hline
+                        \uncover<2->{\textbf{Supervised}} \\
+                        \uncover<2->{CADN            & -- & -- & -- & 89.1} \\
+                        \uncover<2->{Racki et al.    & 99.6 & 99.9 & 99.5 & --} \\
+                        \uncover<2->{Lin et al.      & 99.0 & 99.4 & 99.9 & --} \\
+                        \uncover<2->{Bozic et al.    & \textbf{100} & \textbf{100} & \textbf{100} & \textbf{100}} \\
+                        \hline
+                    \end{tabular}
+                    \caption{DRÆM on DAGM dataset: outperforming unsupervised methods and on par with fully supervised ones.}
+                \end{table}
+            \end{center}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \uncover<3->{
+                \begin{figure}
+                    \centering
+                    \includegraphics[width=0.8\textwidth]{figures/draem-vs-bozic.png}
+                    \caption{DRÆM vs supervised SOTA (Bozic et al.) on DAGM.}
+                \end{figure}
+            }
+        \end{column}
+    \end{columns}
+\end{frame}
+
 
 \begin{frame}{Key Findings \& Application \& Conclusion}{The Value of DRÆM}
     \begin{columns}
@@ -92,21 +152,59 @@
     \end{columns}
 \end{frame}
 
-\begin{frame}{Limitation \& Extension}{Where to go from Here}
-    \begin{itemize}[<+->]
-        \item The method lacks performance in cases where domain knowledge is necessary to perform well
-        \item For example here the whole lead of the transistor is cut off, but it only marks the position of the cut
+\begin{frame}{The Provided Code}{Complete and Good?}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \begin{itemize}[<+->]
+                \item[$\times$] No code for experiments on DAGM dataset
+                \item[$\times$] Inconsistency in variable meaning between code and paper (e.g. $\beta$ as anomaly opacity vs image opacity)
+                \item[$\times$] Wrong weighting of incomplete batches
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \uncover<+->{}
+            \begin{itemize}[<+->]
+                \item[\checkmark] Complete code for training and evaluation (for main findings)
+                \item[\checkmark] Well structured code in separate files for models, loss, data loading, training and evaluation
+                \item[\checkmark] Well readable code
+                \item[\checkmark] Download script for MVTec and DTD datasets
+            \end{itemize}
+        \end{column}
+    \end{columns}
+    \uncover<4->{
         \begin{figure}
             \centering
-            \includegraphics[width=0.5\textwidth]{pitch/transistor.png}
+            \includegraphics[width=0.9\textwidth]{figures/smooth-loss.png}
+            \caption{Loss smoothing by weighting last batch of each epoch}
         \end{figure}
-        \item Another example could be when certain "normalities" are underrepresented in the training data
-        \begin{itemize}
-            \item DRÆM may detect stains on walls as anomalies, while only structural damage should be detected
-            \item In these cases finetuning the discriminative network may improve performance
-        \end{itemize}
+    }
+\end{frame}
+
+\begin{frame}{My Experiments}{Blending in}
+    \begin{itemize}[<+->]
+        \item Ablation studies in the paper show, that adding transparency to anomalies has a huge impact
+        \item Original implementation samples one $\beta\in[0.1,1]$ for the whole image (uniform beta)
+        \item Added four different blending methods:
+        \uncover<+->{
+            \begin{figure}
+                \centering
+                \includegraphics[width=0.75\textwidth]{figures/blend-methods}
+                \caption{Different blending methods (from left to right): uniform beta, perlin beta, texture beta, blurred beta, poisson blending}
+            \end{figure}
+        }
     \end{itemize}
 \end{frame}
+
+\begin{frame}{My Experiments}{Performance Comparison}
+    \begin{center}
+        \begin{table}
+            \centering
+            \input{figures/blending_comparison_table.tex}
+            \caption{Results on MVTec Dataset}
+        \end{table}
+    \end{center}
+\end{frame}
+
 
 \begin{frame}[t,titleimage]{-}
     Thank you for your attention
