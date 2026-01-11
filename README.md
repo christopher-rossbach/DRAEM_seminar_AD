@@ -1,3 +1,11 @@
+# Seminar on Advanced Machine Learning for Anomaly Detection
+
+In this repository, I provide my implementation of additional anomaly generation methods for the [DRAEM](https://openaccess.thecvf.com/content/ICCV2021/papers/Zavrtanik_DRAEM_-_A_Discriminatively_Trained_Reconstruction_Embedding_for_Surface_Anomaly_ICCV_2021_paper.pdf) as part of my seminar on Advanced Machine Learning for Anomaly Detection at FAU Erlangen-Nürnberg.
+See the [report](report/out/report.pdf) for a very brief summary of my work.
+
+See [here](https://github.com/VitjanZ/DRAEM) for the original implementation of DRAEM.
+Below is the original README.md file from the DRAEM repository:
+
 # DRAEM
 
 PyTorch implementation of [DRAEM](https://openaccess.thecvf.com/content/ICCV2021/papers/Zavrtanik_DRAEM_-_A_Discriminatively_Trained_Reconstruction_Embedding_for_Surface_Anomaly_ICCV_2021_paper.pdf) - ICCV2021:

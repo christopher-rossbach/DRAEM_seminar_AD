@@ -12,6 +12,7 @@
 % Graphics rendering using TikZ
 % See: https://en.wikibooks.org/wiki/LaTeX/PGF/TikZ
 \usepackage{tikz}
+\usepackage[table]{xcolor}
 % Include required TikZ libraries here, some exemplary libraries are pre-included
 \usetikzlibrary{calc}
 \usetikzlibrary{matrix}
@@ -50,8 +51,8 @@
     %
     %associate-group={}, % When the thesis is done in cooperation with another chair, add it here
     %associate-group-institute={}, % add cooperating institute or university here
-    seminar={SEMINAR}, % The title of your seminar
-    submission-date={2022-01-01} % The date you handed in your document: Format yyyy-mm-dd
+    seminar={Advanced Machine Learning for Anomaly Detection}, % The title of your seminar
+    submission-date={2026-01-13} % The date you handed in your document: Format yyyy-mm-dd
     %primary-logo={}, % Uses the FAU logo by default
     %primary-logo-height={}, % Uses 16mm as default height
     %secondary-logo={}, % Logo of the secondary institution (cooperating chair/university), USES Faculty logo by default
@@ -71,9 +72,7 @@
     % Content
     \begin{content}
         % Add your content files:
-		\input{sections/01_Introduction}
-		\input{sections/02_Elements}
-		\input{sections/03_Compilation}
+		\input{report-content}
     \end{content}
     
     \pagenumbering{Roman}

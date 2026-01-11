@@ -1,9 +1,21 @@
-\section{Some Appendix Section}
-\label{sec:appendix01}
-Appendices provide only two structural levels, viz., \texttt{\textbackslash section}, and \texttt{\textbackslash subsection}.
+\label{sec:additional-performance-metrics}
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{figures/blending_comparison_combined.pdf}
+    \caption{
+        Combined performance comparison of blending methods and blending method combinations.
+        The reported numbers are averages over four independent runs.
+    }
+    \label{fig:blending_comparison_combined}
+\end{figure}
 
-The numbering of figures, listings, tables, and footnotes is not reset. Thus, it continues as usual in the appendix.
-
-\subsection{Some Appendix Subsection}
-
-\lipsum[10]
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{figures/blending_comparison_heatmap.pdf}
+    \caption{
+        Detailed performance comparison of blending methods per object category.
+        Despite performing best on average, the Poisson image interpolation (PII) blending is outperformed by other methods on some categories in terms of pixel-level AP (e.g., screw or toothbrush).
+        The reported numbers are averages over four independent runs.
+ }
+    \label{fig:blending_comparison_heatmap}
+\end{figure}
