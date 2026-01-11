@@ -1,0 +1,110 @@
+% 	This template is  MIT licensed.
+
+% 	Basic file to demonstrate the usage of this LaTeX template.
+% 	You can build your own paper/thesis on top of this file.
+% 	Simply adjust the document class and all metadata and start working.
+%
+\documentclass[
+	language=english, % set to english or german
+	type=seminar, % set to bachelor, master or seminar
+]{isthesis}
+
+% Graphics rendering using TikZ
+% See: https://en.wikibooks.org/wiki/LaTeX/PGF/TikZ
+\usepackage{tikz}
+% Include required TikZ libraries here, some exemplary libraries are pre-included
+\usetikzlibrary{calc}
+\usetikzlibrary{matrix}
+\usetikzlibrary{positioning}
+\usetikzlibrary{shapes.geometric}
+
+%Add your library here
+\addbibresource{library.bib}
+
+% Import acronyms
+\input{config/acronyms}
+
+% Import symbols
+\input{config/symbols}
+
+% Import custom commands
+\input{config/commands}
+
+% Document meta information
+% Load personal data from a local, gitignored file
+\IfFileExists{config/personal_data.tex}{\input{config/personal_data}}{}
+
+\isthesis{
+    title={DRÆM: A Discriminatively Trained Reconstruction Embedding for Surface Anomaly Detection},
+    sub-title={Scientific Report},
+    author-name={Christopher Roßbach}, % Separate multiple authors with commas
+    author-email={faumail@fau.de},
+    author-matriculation={1234567},
+    %author-phone={+49 XXXXXXXXX}, % Use international numbers format
+    principal-supervisor={Prof. Dr. Bernhard Kainz}, % This must be a professor
+    associate-supervisor={Johanna Müller}, % This is your main supervisor, i.e., a post doc or doctoral student
+    tutor-supervisor={}, % If required, define an additional supervisor resp. tutor here
+    group-institute={Department Artificial Intelligence in Biomedical Engineering (AIBE)},
+    group={Image Data Exploration and Analysis (IDEA) Lab},
+    % studies={M.Sc. International Information Systems}, %your field of studies, i.e. Wirtschaftsinformatik or International Information Systems
+    %
+    %associate-group={}, % When the thesis is done in cooperation with another chair, add it here
+    %associate-group-institute={}, % add cooperating institute or university here
+    seminar={SEMINAR}, % The title of your seminar
+    submission-date={2022-01-01} % The date you handed in your document: Format yyyy-mm-dd
+    %primary-logo={}, % Uses the FAU logo by default
+    %primary-logo-height={}, % Uses 16mm as default height
+    %secondary-logo={}, % Logo of the secondary institution (cooperating chair/university), USES Faculty logo by default
+    %secondary-logo-height={} % Uses 16mm as default height
+}
+
+
+\begin{document}
+    % Title page
+    \newcounter{savepage}
+    \maketitle
+	
+	% storing the last pagenumber
+    \setcounter{savepage}{\value{page}}
+    
+    
+    % Content
+    \begin{content}
+        % Add your content files:
+		\input{sections/01_Introduction}
+		\input{sections/02_Elements}
+		\input{sections/03_Compilation}
+    \end{content}
+    
+    \pagenumbering{Roman}
+    \setcounter{page}{\numexpr\value{savepage}}
+
+    % References
+    \references{}
+    
+    % Appendix
+     \begin{appendix}
+        % In the appendices, use \section{} instead of \chapter{}
+         \input{appendices/appendix}
+     \end{appendix}
+
+
+
+
+    % Declaration of authorship
+    % \authorshipstatement[pagenumbering=false]
+    \authorshipstatement[pagenumbering=true]
+    % \authorshipstatement[pagenumbering=only]
+    
+    % Consent form for use of plagiarism detection software
+    % Not yet required
+    % \consentform[pagenumbering=false]
+    % \consentform[pagenumbering=true]
+    % \consentform[pagenumbering=only]
+    
+    % Bonus: Wordcount
+    % cd %FOLDER WHERE THE .tex FILES ARE IN %
+    % clear
+    % texcount -total -q -col -sum *.tex
+    
+\end{document}
