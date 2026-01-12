@@ -1,17 +1,21 @@
 My work extends the code provided by the DRÆM paper \citep{zavrtanikDRAEMDiscriminativelyTrained2021}, mainly by additional anomaly generation methods\footnote{My full code is available at \url{https://github.com/christopher-rossbach/DRAEM_seminar_AD}.}.
 To make full use of the HPC resources provided by NHR@FAU, I implemented micro-batch training and used automatic mixed precision (AMP) for the forward pass, while using full precision for loss calculation and evaluation to ensure numerical stability.
-Besides a reduced memory footprint, the implementation of micro-batches fixed a bug in the original code, where the last incomplete batch of each epoch was weighted incorrectly during training (see Figure~\ref{fig:smooth-loss-curve}).
+Besides a reduced memory footprint, the implementation of micro-batches fixed a bug in the original code, where the last incomplete batch of each epoch was weighted incorrectly during training (see Figure~\ref{fig:smooth-loss-curve} in the appendinx).
 I also switched to a cosine annealing learning rate scheduler to ensure comparability between different methods without the need for additional hyperparameter searches.
 These adjustments can be found in the \texttt{train\_DRAEM.py} script.
 I performed multiple test runs after each adjustment to rule out any negative impact on the final performance.
-In fact, my reproduced AUROC metrics (image and pixel level) on the combined MVTec dataset are within a 0.1\% interval of the values reported in the paper, while the pixel AP value improved from 68.4 to 69.7, probably as a result of stabilized training (average of 4 independent runs)\footnote{The metrics on a per-category basis differ notably more, but this can be attributed to the natural variance of the training process. For concrete values see Figure~\ref{fig:blending_comparison_heatmap}.}.
+In fact, my reproduced AUROC metrics (image and pixel level) on the combined MVTec dataset are within a 0.1\% interval of the values reported in the paper, while the pixel AP value improved from 68.4 to 69.7, probably as a result of stabilized training (average of 4 independent runs)\footnote{The metrics on a per-category basis differ notably more, but this can be attributed to the natural variance of the training process. For concrete values see Figure~\ref{fig:uniform_vs_poisson_perlin_all_metrics}.}.
 The scripts for running the experiments with reproducible parametrization can be found in the \texttt{slurm} directory.
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.9\textwidth]{figures/smooth-loss.png}
-    \caption{An example of the achieved loss smoothing by weighting the last batch of each epoch. The graph shows the SSIM loss on the training set over 700 epochs with and without correct weighting of the last incomplete batch.}
-    \label{fig:smooth-loss-curve}
+    \includegraphics[width=\textwidth]{figures/blend-methods}
+    \caption{Different blending methods (from left to right): uniform $\beta$, Perlin-$\beta$, texture-$\beta$, blurred $\beta$, Poisson image interpolation.
+    The top row shows an example normal image with added anomalies.
+    The bottom row shows the strength of the contribution of the anomaly to the final image.
+    It is clearly visible how the anomaly strength in the Poisson image interpolation is guided by the image gradients (stronger near the edge of the pill).
+    }
+    \label{fig:blend-methods}
 \end{figure}
 
 My main contribution, implementing additional blending methods for anomaly generation, is part of the data loading pipeline and can therefore be found in the \texttt{data\_loader.py} script.
@@ -25,16 +29,6 @@ Combining the Poisson blending with other methods during training leverages thes
 The combination of methods was done by randomly selecting one blending method for each training image.
 A full excerpt of the performance metrics can be found in the appendix.
 
-\begin{figure}
-    \centering
-    \includegraphics[width=\textwidth]{figures/blend-methods}
-    \caption{Different blending methods (from left to right): uniform $\beta$, Perlin-$\beta$, texture-$\beta$, blurred $\beta$, Poisson image interpolation.
-    The top row shows an example normal image with added anomalies.
-    The bottom row shows the strength of the contribution of the anomaly to the final image.
-    It is clearly visible how the anomaly strength in the Poisson image interpolation is guided by the image gradients (stronger near the edge of the pill).
-    }
-    \label{fig:blend-methods}
-\end{figure}
 \begin{table}[h]
     \centering
     \input{figures/blending_comparison_table_report}

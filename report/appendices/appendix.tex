@@ -1,5 +1,5 @@
 \label{sec:additional-performance-metrics}
-\begin{figure}[htbp]
+\begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{figures/blending_comparison_combined.pdf}
     \caption{
@@ -8,8 +8,7 @@
     }
     \label{fig:blending_comparison_combined}
 \end{figure}
-
-\begin{figure}[htbp]
+\begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{figures/blending_comparison_heatmap.pdf}
     \caption{
@@ -18,4 +17,32 @@
         The reported numbers are averages over four independent runs.
  }
     \label{fig:blending_comparison_heatmap}
+\end{figure}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.9\textwidth]{figures/smooth-loss.png}
+    \caption{An example of the achieved loss smoothing by weighting the last batch of each epoch. The graph shows the SSIM loss on the training set over 700 epochs with and without correct weighting of the last incomplete batch.}
+    \label{fig:smooth-loss-curve}
+\end{figure}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{figures/uniform_vs_poisson_perlin_all_metrics}
+    \caption{
+        Detailed performance comparison of blending methods per object category.
+        It can be seen that the combination of Poisson interpolation and Perlin-$\beta$ blending outperforms the original blending method not only in general but also separately in each object category with a few exceptions.
+        The black diamonds indicate the values that the DRÆM paper reports for the different metrics.
+        It is noteable that my experiments have large diviations within a single object type and the paper values often are not within the spread of my results.
+        p-values are provided for the significance of the difference between uniform-$\beta$ and Poisson blending.
+        (Note: the paper does not report image level AP values.)
+ }
+    \label{fig:uniform_vs_poisson_perlin_all_metrics}
+\end{figure}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{figures/uniform_vs_poisson_perlin_overall}
+    \caption{
+        An aggregated version of the performance comparison in Figure~\ref{fig:uniform_vs_poisson_perlin_all_metrics} of blending methods over all object categories.
+        (Note: the paper does not report image level AP values.)
+ }
+    \label{fig:uniform_vs_poisson_perlin_overall}
 \end{figure}

@@ -197,11 +197,20 @@
 
 \begin{frame}{My Experiments}{Performance Comparison}
     \begin{center}
-        \begin{table}
-            \centering
-            \input{figures/blending_comparison_table.tex}
-            \caption{Results on the MVTec dataset for different blending methods.}
-        \end{table}
+        \only<1,3,4>{
+            \begin{table}
+                \centering
+                \input{figures/blending_comparison_table.tex}
+                \caption{Results on the MVTec dataset for different blending methods.}
+            \end{table}
+        }
+        \only<2>{
+            \begin{figure}
+                \centering
+                \includegraphics[width=0.7\textwidth]{figures/uniform_vs_poisson_pixel_ap}
+                \caption{Pixel AP: Uniform blending vs Poisson image interpolation for selected object types}
+            \end{figure}
+        }
     \end{center}
 \end{frame}
 
