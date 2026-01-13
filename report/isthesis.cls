@@ -838,6 +838,10 @@
 
 			
 			\isthesis@author@city,  \today\\[2\baselineskip]%
+            \IfFileExists{figures/Unterschrift.pdf}{%
+            \smash{\raisebox{0.4\baselineskip}{\makebox[0pt][l]{%
+                \quad\includegraphics[height=1.5cm]{figures/Unterschrift}%
+            }}}}{}%
 			\isthesis@author@name
         }
     }%

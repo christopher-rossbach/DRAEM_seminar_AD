@@ -1,2 +1,6 @@
 out/*
 !out/*.pdf
+config/personal_data.tex
+figures/Unterschrift.pdf
+config/personal_data_hidden.tex
+figures/Unterschrift_hidden.pdf
