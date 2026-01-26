@@ -1,19 +1,19 @@
 \chapter*{My Extensions and Experiments}
-My work extends the code provided by the DRÆM paper \citep{zavrtanikDRAEMDiscriminativelyTrained2021}, mainly by additional anomaly generation methods\footnote{My full code is available at \url{https://github.com/christopher-rossbach/DRAEM_seminar_AD}.}.
-To be able to run more experiments and use also the lower end GPUs of the HPC, I implemented micro-batch training and used automatic mixed precision (AMP) for the forward pass, while using full precision for loss calculation and evaluation to ensure numerical stability.
-In addition I fixed a bug where the last incomplete batch of each epoch was weighted incorrectly during training, which was causing instability in the training.
+My work extends the code provided by the DRÆM paper \citep{zavrtanikDRAEMDiscriminativelyTrained2021}, primarily through additional anomaly generation methods\footnote{My full code is available at \url{https://github.com/christopher-rossbach/DRAEM_seminar_AD}.}.
+To run more experiments and also use the lower-end GPUs of the HPC, I implemented micro-batch training and used automatic mixed precision (AMP) for the forward pass, while using full precision for loss calculation and evaluation to ensure numerical stability.
+In addition, I fixed a bug where the last incomplete batch of each epoch was weighted incorrectly during training, which was causing training instability.
 I also switched to a cosine annealing learning rate scheduler to ensure comparability between different methods without the need for additional hyperparameter searches.
-I performed multiple test runs after each adjustment to rule out any negative impact on the final performance.
-In fact, my reproduced AUROC metrics (image- and pixel-level) on the combined MVTec dataset are within 0.1 percentage points of the values reported in the paper, while the pixel AP value improved from 68.4\% to 69.7\%, probably due to more stable training.
+Multiple test runs were performed after each adjustment to rule out any negative impact on the final performance.
+In fact, my reproduced AUROC metrics (image- and pixel-level) on the combined MVTec dataset are within 0.1 percentage points of the values reported in the paper, while the pixel AP value improved from 68.4\% to 69.7\%, likely due to more stable training.
 
 
-I noted that the anomaly blending method in the paper always produced anomalies with sharp borders, which are arguably rather easy to spot.
+I observed that the anomaly blending method in the paper always produced anomalies with sharp borders, which are relatively easy to detect.
 By varying the anomaly strength throughout the anomaly region, more realistic anomalies can be generated, which should lead to a more robust model.
-For all blending methods, I kept the anomaly mask generation the same and just varied the strength depending on the blending method.
-The blending methods are: uniform $\beta$ blending (as in the original paper, without spatial variation in anomaly strength), Perlin-$\beta$ blending (where Perlin noise determines the anomaly opacity), texture-$\beta$ blending (where the luminance of a randomly sampled texture determines the anomaly opacity), blurred $\beta$ blending (where the borders of the anomaly mask are blurred), and channel-wise Poisson image interpolation, suggested by my supervisor Johanna Müller, where the anomaly strength is guided by the source image gradient (see \citet{tanDetectingOutliersPoisson2021}).
+For all blending methods, I kept the anomaly mask generation the same and varied only the strength depending on the blending method.
+The blending methods are: uniform $\beta$ blending (as in the original paper, without spatial variation in anomaly strength), Perlin-$\beta$ blending (where Perlin noise determines the anomaly opacity), texture-$\beta$ blending (where the luminance of a randomly sampled texture determines the anomaly opacity), blurred $\beta$ blending (where the borders of the anomaly mask are blurred), and channel-wise Poisson image interpolation, suggested by my supervisor, Johanna Müller, where the anomaly strength is guided by the source image gradient (see \citet{tanDetectingOutliersPoisson2021}).
 The Poisson image interpolation, as the only content-sensitive blending method, yields on average the best results.
-However, on some object categories, the other methods outperform the Poisson blending.
-The best general performance was achieved by combining the Poisson and the Perlin-$\beta$ blending methods, by randomly choosing one for each generated anomaly.
+However, on some object categories, the other methods outperform Poisson interpolation.
+The best general performance was achieved by combining the Poisson interpolation and Perlin-$\beta$ blending methods, randomly choosing one for each generated anomaly.
 
 \begin{center}
     \input{figures/blending_comparison_table_report}
